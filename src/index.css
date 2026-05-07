@@ -14,6 +14,60 @@
   --dark-800: #050d14;
   --dark-700: #091929;
 }
+
+
+
+
+/* ############################################################### */
+
+/* ── cursor: hide native ── */
+* { cursor: none !important; }
+
+.cur-dot {
+  position: fixed; width: 6px; height: 6px;
+  border-radius: 50%; background: #00f5ff;
+  transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 99999;
+  box-shadow: 0 0 6px #00f5ff, 0 0 14px rgba(0,245,255,0.6);
+  transition: width .15s, height .15s;
+}
+.cur-cross {
+  position: fixed; width: 20px; height: 20px;
+  transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 99998;
+}
+.cur-cross::before, .cur-cross::after {
+  content: ''; position: absolute; background: rgba(0,245,255,0.55);
+}
+.cur-cross::before { width:1px; height:100%; left:50%; transform:translateX(-50%); }
+.cur-cross::after  { width:100%; height:1px; top:50%; transform:translateY(-50%); }
+
+.cur-ring {
+  position: fixed; width: 34px; height: 34px;
+  border-radius: 50%; border: 1.5px solid rgba(0,245,255,0.5);
+  transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 99997;
+  transition: width .18s ease, height .18s ease, border-color .18s ease;
+}
+/* hover state */
+body.cursor-hovering .cur-dot  { width:10px; height:10px; background:#fff; }
+body.cursor-hovering .cur-ring { width:48px; height:48px; border-color:rgba(0,245,255,0.85); }
+
+/* click burst */
+.cur-burst {
+  position: fixed; border-radius: 50%;
+  border: 1.5px solid #00f5ff;
+  transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 99996;
+  animation: burstOut 0.5s ease-out forwards;
+}
+@keyframes burstOut {
+  0%   { width:6px; height:6px; opacity:0.9; }
+  100% { width:52px; height:52px; opacity:0; }
+}
+
+/* ############################################################### */
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body { font-family: 'Rajdhani', sans-serif; background: var(--dark-900); color: #e2e8f0; overflow-x: hidden; }
