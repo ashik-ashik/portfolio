@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import RainCanvas from "../components/RainBackground";
 import ProjectsSection from "../components/Projects";
+import NavBar from "../components/Navbar";
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
@@ -82,88 +83,7 @@ const languagesList = [
   { name: "English", level: "Professional Working", percent: 75, color: "#a78bfa" },
 ];
 
-const NAV_SECTIONS = ["home", "works", "projects", "experience", "education", "skills", "more"];
 
-// 8888888888888888888888*****************
-// mobile menu toggle/
-/**
- * nav-toggle.ts
- * Mobile hamburger menu logic — drop this script anywhere after the <nav> mounts.
- * Works with vanilla JS; no framework dependencies.
- */
-
-(function initMobileNav() {
-  const toggle = document.getElementById("nav-toggle") as HTMLButtonElement | null;
-  const menu   = document.getElementById("mobile-menu") as HTMLElement | null;
-
-  if (!toggle || !menu) return;
-
-  // Pre-measure full height so the CSS transition has a target
-  function getMenuHeight(): number {
-    menu!.style.maxHeight = "none";
-    const h = menu!.scrollHeight;
-    menu!.style.maxHeight = "0px";
-    return h;
-  }
-
-  let isOpen = false;
-  let menuHeight = 0;
-
-  // Measure once fonts are ready
-  document.fonts.ready.then(() => { menuHeight = getMenuHeight(); });
-
-  toggle.addEventListener("click", () => {
-    isOpen = !isOpen;
-
-    if (!menuHeight) menuHeight = getMenuHeight();
-
-    // Animate open / close
-    menu.style.maxHeight  = isOpen ? `${menuHeight}px` : "0px";
-    menu.style.opacity    = isOpen ? "1" : "0";
-
-    toggle.setAttribute("aria-expanded", String(isOpen));
-
-    // Animate hamburger → X
-    const bars = toggle.querySelectorAll<HTMLElement>(".hamburger-bar");
-    if (isOpen) {
-      bars[0].style.transform    = "translateY(7px) rotate(45deg)";
-      bars[1].style.opacity      = "0";
-      bars[1].style.transform    = "scaleX(0)";
-      bars[2].style.transform    = "translateY(-7px) rotate(-45deg)";
-      toggle.style.borderColor   = "rgba(0,245,255,0.8)";
-      toggle.style.background    = "rgba(0,245,255,0.12)";
-      toggle.style.boxShadow     = "0 0 20px rgba(0,245,255,0.35)";
-    } else {
-      bars[0].style.transform    = "";
-      bars[1].style.opacity      = "1";
-      bars[1].style.transform    = "";
-      bars[2].style.transform    = "";
-      toggle.style.borderColor   = "";
-      toggle.style.background    = "";
-      toggle.style.boxShadow     = "";
-    }
-  });
-
-  // Close on outside click
-  document.addEventListener("click", (e) => {
-    if (isOpen && !toggle.contains(e.target as Node) && !menu.contains(e.target as Node)) {
-      toggle.click();
-    }
-  });
-
-  // Close on Escape
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && isOpen) toggle.click();
-  });
-
-  // Re-measure if window resizes (font/layout shifts)
-  window.addEventListener("resize", () => {
-    menuHeight = getMenuHeight();
-    if (isOpen) menu.style.maxHeight = `${menuHeight}px`;
-    // Auto-close if resized to desktop
-    if (window.innerWidth >= 768 && isOpen) toggle.click();
-  });
-})();
 
 // ─── Typewriter hook ──────────────────────────────────────────────────────────
 
@@ -255,23 +175,10 @@ const Glass: React.FC<{ children: React.ReactNode; className?: string; style?: R
 // ─── Main Portfolio Component ─────────────────────────────────────────────────
 
 const Portfolio: React.FC = () => {
-  const [activeSection, setActiveSection] = useState("home");
   const typed = useTypewriter(personalInfo.taglines);
 
-  useEffect(() => {
-    const onScroll = () => {
-      const scrollY = window.scrollY + 120;
-      for (const id of NAV_SECTIONS) {
-        const el = document.getElementById(`section-${id}`);
-        if (el && el.offsetTop <= scrollY) setActiveSection(id);
-      }
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
-  const scrollTo = (id: string) =>
-    document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: "smooth" });
+
 
   return (
     <>
@@ -279,7 +186,7 @@ const Portfolio: React.FC = () => {
         <div className="relative z-10 min-h-screen font-sans text-slate-200">
 
         {/* ── Google Fonts ── */}
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600&display=swap');
+        <style>{`);
             .font-orbitron { font-family: 'Orbitron', monospace; }
             .font-rajdhani { font-family: 'Rajdhani', sans-serif; }
             body { font-family: 'Rajdhani', sans-serif; }
@@ -289,107 +196,7 @@ const Portfolio: React.FC = () => {
 
 
 
-        {/* ── NAV ─────────────────────────────────────────────────────────────── */}
-        <nav className="sticky top-0 z-50 bg-slate-950/80 backdrop-blur-xl border-b border-cyan-400/15">
-
-          {/* ── Top bar ── */}
-          <div className="flex items-center justify-between px-4 sm:px-8">
-
-            {/* Logo */}
-            <span className="font-orbitron text-sm font-bold tracking-widest text-cyan-400 uppercase
-                            py-4 whitespace-nowrap shrink-0
-                            [text-shadow:0_0_12px_rgba(0,245,255,0.6)]">
-              AA
-            </span>
-
-            {/* Desktop links */}
-            <div className="hidden md:flex items-center gap-0 overflow-x-auto scrollbar-none
-                            border-l border-cyan-400/20 ml-5 pl-5">
-              {NAV_SECTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => scrollTo(s)}
-                  className={`font-orbitron text-[11px] font-semibold tracking-widest uppercase px-3 py-4
-                              whitespace-nowrap shrink-0 border-b-2 transition-all duration-200
-                              ${activeSection === s
-                                ? "text-cyan-400 border-cyan-400 [text-shadow:0_0_8px_rgba(0,245,255,0.5)]"
-                                : "text-slate-200 border-transparent hover:text-cyan-400"
-                              }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-
-            {/* Mobile hamburger */}
-            <button
-              id="nav-toggle"
-              aria-label="Toggle menu"
-              aria-expanded="false"
-              className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-[5px]
-                        rounded border border-cyan-400/30 bg-cyan-400/5
-                        hover:bg-cyan-400/15 hover:border-cyan-400/60
-                        transition-all duration-200 group
-                        [box-shadow:0_0_12px_rgba(0,245,255,0.08)]
-                        hover:[box-shadow:0_0_18px_rgba(0,245,255,0.25)]"
-            >
-              {/* Three animated bars */}
-              <span className="hamburger-bar block w-5 h-[2px] bg-cyan-400 rounded-full
-                              transition-all duration-300
-                              [box-shadow:0_0_6px_rgba(0,245,255,0.8)]" />
-              <span className="hamburger-bar block w-5 h-[2px] bg-cyan-400 rounded-full
-                              transition-all duration-300
-                              [box-shadow:0_0_6px_rgba(0,245,255,0.8)]" />
-              <span className="hamburger-bar block w-5 h-[2px] bg-cyan-400 rounded-full
-                              transition-all duration-300
-                              [box-shadow:0_0_6px_rgba(0,245,255,0.8)]" />
-            </button>
-          </div>
-
-          {/* ── Mobile dropdown panel ── */}
-          <div
-            id="mobile-menu"
-            className="md:hidden overflow-hidden max-h-0 transition-all duration-500 ease-in-out"
-            style={{ transition: "max-height 0.45s cubic-bezier(0.4,0,0.2,1), opacity 0.35s ease" }}
-          >
-            {/* Scan-line divider */}
-            <div className="h-px w-full bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent
-                            [box-shadow:0_0_8px_rgba(0,245,255,0.4)]" />
-
-            <div className="flex flex-col px-4 pb-4 pt-2 gap-1 bg-slate-950/95">
-              {NAV_SECTIONS.map((s, i) => (
-                <button
-                  key={s}
-                  onClick={() => {
-                    scrollTo(s);
-                    // Delegate to the toggle button so hamburger → X animation fully reverses
-                    const toggle = document.getElementById("nav-toggle") as HTMLButtonElement | null;
-                    if (toggle && toggle.getAttribute("aria-expanded") === "true") toggle.click();
-                  }}
-                  style={{ animationDelay: `${i * 50}ms` }}
-                  className={`mobile-nav-item font-orbitron text-[11px] font-semibold tracking-widest uppercase
-                              px-4 py-3 text-left rounded
-                              border transition-all duration-200
-                              flex items-center gap-3
-                              ${activeSection === s
-                                ? "text-cyan-400 border-cyan-400/40 bg-cyan-400/10 [text-shadow:0_0_8px_rgba(0,245,255,0.5)] [box-shadow:inset_0_0_16px_rgba(0,245,255,0.07)]"
-                                : "text-slate-300 border-slate-700/50 bg-slate-900/40 hover:text-cyan-400 hover:border-cyan-400/30 hover:bg-cyan-400/5"
-                              }`}
-                >
-                  {/* Active indicator dot */}
-                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-all duration-200
-                                    ${activeSection === s
-                                      ? "bg-cyan-400 [box-shadow:0_0_8px_rgba(0,245,255,1)]"
-                                      : "bg-slate-600"
-                                    }`} />
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        </nav>
-
-        
+        <NavBar />
 
         {/* ── HERO ────────────────────────────────────────────────────────────── */}
         <section id="section-home" className="min-h-screen flex items-center px-4 sm:px-8 py-24 max-w-7xl mx-auto">
@@ -718,7 +525,7 @@ const Portfolio: React.FC = () => {
         {/* ── FOOTER ──────────────────────────────────────────────────────────── */}
         <footer className="border-t border-cyan-400/15 bg-gray-900/60 py-6 text-center">
             <p className="font-orbitron text-[10px] tracking-[2px] uppercase text-slate-300">
-            © {new Date().getFullYear()} Md. Ashik Ali · Researcher & Social Worker · Bangladesh
+            © {new Date().getFullYear()} Md. Ashik Ali · ASH · Bangladesh
             </p>
         </footer>
 
