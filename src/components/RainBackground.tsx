@@ -31,8 +31,8 @@ interface LightningBolt {
   segments: LightningSegment[];
   branches: LightningSegment[][];
   alpha: number;
-  phase: number;       // 0 = bright flicker, 1 = fade out
-  flashFrames: number; // how many frames to flicker before fading
+  phase: number;
+  flashFrames: number;
 }
 
 // ─── Lightning geometry ────────────────────────────────────────────────────────
@@ -70,65 +70,152 @@ function createBolt(W: number, H: number): LightningBolt {
     branches.push(buildSegments(pivot.x2, pivot.y2, bx2, by2, W * 0.08, 5));
   }
 
-  return { segments, branches, alpha: 1, phase: 0, flashFrames: 3 + Math.floor(Math.random() * 4) };
+  return { segments, branches, alpha: 1, phase: 0, flashFrames: 10 + Math.floor(Math.random() * 8) };
 }
 
-// ─── Thunder (Web Audio API) ───────────────────────────────────────────────────
+// ─── Thunder — 4-layer sharp crack + deep rolling rumble ─────────────────────
+//
+//  Layer 1 — Ultra-sharp electric ZAP transient   (0–60 ms,  highpass 3.5kHz)
+//  Layer 2 — Woody mid-frequency CRACK            (0–550 ms, bandpass 900Hz Q12)
+//  Layer 3 — Deep rolling RUMBLE                  (0–4.5 s,  lowpass sweep 320→22Hz)
+//  Layer 4 — Distant echo rumble                  (delayed,  lowpass 160→18Hz)
+//
+function synthesiseThunder(ac: AudioContext): void {
+  const now = ac.currentTime;
+  const duration = 4.5;
+  const frameCount = Math.ceil(ac.sampleRate * duration);
 
-function synthesiseThunder(ac: AudioContext, delayMs: number): void {
-  setTimeout(() => {
-    const duration = 3.8;
-    const sampleRate = ac.sampleRate;
-    const frameCount = sampleRate * duration;
+  // Shared white-noise buffer — each layer gets its own BufferSource
+  const buf = ac.createBuffer(1, frameCount, ac.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < frameCount; i++) data[i] = Math.random() * 2 - 1;
 
-    // White-noise buffer
-    const buf = ac.createBuffer(1, frameCount, sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < frameCount; i++) data[i] = Math.random() * 2 - 1;
+  const makeSource = () => {
+    const s = ac.createBufferSource();
+    s.buffer = buf;
+    return s;
+  };
 
-    const source = ac.createBufferSource();
-    source.buffer = buf;
+  const master = ac.createGain();
+  master.gain.value = 1.0;
+  master.connect(ac.destination);
 
-    // Initial sharp crack: bandpass around 150–400 Hz
-    const crack = ac.createBiquadFilter();
-    crack.type = "bandpass";
-    crack.frequency.value = 200;
-    crack.Q.value = 0.8;
+  // ── Layer 1: electric ZAP (4 ms attack, gone by 60 ms) ───────────────────
+  {
+    const src = makeSource();
+    const hp = ac.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 3500;
+    hp.Q.value = 0.5;
 
-    // Deep rumble: low-pass sweep downward
-    const low = ac.createBiquadFilter();
-    low.type = "lowpass";
-    low.frequency.setValueAtTime(200, ac.currentTime);
-    low.frequency.exponentialRampToValueAtTime(28, ac.currentTime + duration);
+    const bp = ac.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 1200;
+    bp.Q.value = 6;
 
-    // Volume envelope: fast attack → quick drop → slow rumble decay
-    const gain = ac.createGain();
-    const now = ac.currentTime;
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(1.0, now + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.35, now + 0.18);
-    gain.gain.exponentialRampToValueAtTime(0.12, now + 1.2);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(2.8, now + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
 
-    source.connect(crack);
-    crack.connect(low);
-    low.connect(gain);
-    gain.connect(ac.destination);
-    source.start();
-  }, delayMs);
+    src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(master);
+    src.start(now); src.stop(now + 0.12);
+  }
+
+  // ── Layer 2: sharp woody CRACK (8 ms attack, dies ~550 ms) ───────────────
+  {
+    const src = makeSource();
+    const hp = ac.createBiquadFilter();
+    hp.type = "highpass";
+    hp.frequency.value = 1800;
+    hp.Q.value = 0.7;
+
+    const bp = ac.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 900;
+    bp.Q.value = 12; // narrow Q = crisp crack character
+
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(1.8, now + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.3,  now + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+
+    src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(master);
+    src.start(now); src.stop(now + 0.6);
+  }
+
+  // ── Layer 3: deep rolling RUMBLE (full duration) ──────────────────────────
+  {
+    const src = makeSource();
+    const lp = ac.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(320, now);
+    lp.frequency.exponentialRampToValueAtTime(22, now + duration);
+    lp.Q.value = 1.2;
+
+    const lp2 = ac.createBiquadFilter();
+    lp2.type = "lowpass";
+    lp2.frequency.value = 180;
+
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, now);
+    g.gain.linearRampToValueAtTime(0.9, now + 0.02);
+    g.gain.setValueAtTime(0.9, now + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.4,  now + 0.8);
+    g.gain.exponentialRampToValueAtTime(0.12, now + 2.2);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    src.connect(lp); lp.connect(lp2); lp2.connect(g); g.connect(master);
+    src.start(now); src.stop(now + duration);
+  }
+
+  // ── Layer 4: distant echo rumble (random delay 280–830 ms) ───────────────
+  {
+    const echoDelay = 0.28 + Math.random() * 0.55;
+    const src = makeSource();
+    const lp = ac.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.setValueAtTime(160, now + echoDelay);
+    lp.frequency.exponentialRampToValueAtTime(18, now + duration);
+
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0, now + echoDelay);
+    g.gain.linearRampToValueAtTime(0.45, now + echoDelay + 0.04);
+    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    src.connect(lp); lp.connect(g); g.connect(master);
+    src.start(now + echoDelay); src.stop(now + duration);
+  }
+}
+
+// ─── Ensure AudioContext is live, then fire ───────────────────────────────────
+function fireThunder(acRef: React.MutableRefObject<AudioContext | null>): void {
+  if (!acRef.current || acRef.current.state === "closed") {
+    acRef.current = new (
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    )();
+  }
+  const ac = acRef.current;
+  if (ac.state === "suspended") {
+    ac.resume().then(() => synthesiseThunder(ac));
+  } else {
+    synthesiseThunder(ac);
+  }
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 const RainCanvas: React.FC = () => {
-  const rainCanvasRef  = useRef<HTMLCanvasElement>(null);
-  const boltCanvasRef  = useRef<HTMLCanvasElement>(null);
-  const animRef        = useRef<number>(0);
-  const dropsRef       = useRef<Drop[]>([]);
-  const ripplesRef     = useRef<Ripple[]>([]);
-  const boltsRef       = useRef<LightningBolt[]>([]);
-  const flashAlphaRef  = useRef<number>(0);
-  const audioCtxRef    = useRef<AudioContext | null>(null);
+  const rainCanvasRef = useRef<HTMLCanvasElement>(null);
+  const boltCanvasRef = useRef<HTMLCanvasElement>(null);
+  const animRef       = useRef<number>(0);
+  const dropsRef      = useRef<Drop[]>([]);
+  const ripplesRef    = useRef<Ripple[]>([]);
+  const boltsRef      = useRef<LightningBolt[]>([]);
+  const flashAlphaRef = useRef<number>(0);
+  const audioCtxRef   = useRef<AudioContext | null>(null);
 
   const spawnRipple = useCallback((x: number, surfaceY: number) => {
     ripplesRef.current.push({
@@ -140,22 +227,11 @@ const RainCanvas: React.FC = () => {
     });
   }, []);
 
+  // Every strike fires fireThunder — no skipping, no random chance
   const triggerStrike = useCallback((W: number, H: number) => {
     boltsRef.current.push(createBolt(W, H));
     flashAlphaRef.current = 1;
-
-    // Initialise AudioContext on first strike (needs user gesture or just fires)
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      )();
-    }
-    const ac = audioCtxRef.current;
-    if (ac.state === "suspended") ac.resume();
-
-    synthesiseThunder(ac, 0);                           // crack
-    synthesiseThunder(ac, 280 + Math.random() * 600);   // rolling echo
+    fireThunder(audioCtxRef);
   }, []);
 
   useEffect(() => {
@@ -187,7 +263,6 @@ const RainCanvas: React.FC = () => {
     resize();
     window.addEventListener("resize", resize);
 
-    // ── Draw ──────────────────────────────────────────────────────────────────
     const draw = () => {
       const W = rain.width;
       const H = rain.height;
@@ -196,7 +271,6 @@ const RainCanvas: React.FC = () => {
       // ── Rain canvas ────────────────────────────────────────────────────────
       rctx.clearRect(0, 0, W, H);
 
-      // Water layer
       const wg = rctx.createLinearGradient(0, SURFACE_Y, 0, H);
       wg.addColorStop(0, "rgba(0,120,200,0.28)");
       wg.addColorStop(1, "rgba(0,40,90,0.55)");
@@ -258,7 +332,6 @@ const RainCanvas: React.FC = () => {
       // ── Lightning / flash canvas ───────────────────────────────────────────
       bctx.clearRect(0, 0, W, H);
 
-      // Full-screen blue-white flash
       const fa = flashAlphaRef.current;
       if (fa > 0) {
         const fg = bctx.createRadialGradient(W / 2, H * 0.1, 0, W / 2, H * 0.1, W);
@@ -267,7 +340,7 @@ const RainCanvas: React.FC = () => {
         fg.addColorStop(1, `rgba(80,120,255,${fa * 0.04})`);
         bctx.fillStyle = fg;
         bctx.fillRect(0, 0, W, H);
-        flashAlphaRef.current = Math.max(0, fa - 0.065);
+        flashAlphaRef.current = Math.max(0, fa - 0.022);
       }
 
       // Bolts
@@ -284,20 +357,16 @@ const RainCanvas: React.FC = () => {
           bctx.lineJoin = "round";
 
           if (glow) {
-            // Outer soft halo
             bctx.strokeStyle = `rgba(140,190,255,${alpha * 0.18})`;
             bctx.lineWidth = coreW * 12;
             bctx.stroke();
-            // Mid glow
             bctx.strokeStyle = `rgba(180,215,255,${alpha * 0.35})`;
             bctx.lineWidth = coreW * 5;
             bctx.stroke();
-            // Inner bright glow
             bctx.strokeStyle = `rgba(220,240,255,${alpha * 0.6})`;
             bctx.lineWidth = coreW * 2.2;
             bctx.stroke();
           }
-          // Pure white core
           bctx.strokeStyle = `rgba(255,255,255,${alpha})`;
           bctx.lineWidth = coreW;
           bctx.stroke();
@@ -310,7 +379,7 @@ const RainCanvas: React.FC = () => {
           b.flashFrames--;
           if (b.flashFrames <= 0) b.phase = 1;
         } else {
-          b.alpha -= 0.055;
+          b.alpha -= 0.018;
         }
         if (b.alpha <= 0) boltsRef.current.splice(i, 1);
       }
@@ -320,7 +389,6 @@ const RainCanvas: React.FC = () => {
 
     draw();
 
-    // ── Lightning scheduler ───────────────────────────────────────────────────
     let timeoutId: ReturnType<typeof setTimeout>;
     const schedule = () => {
       const delay = 5000 + Math.random() * 9000;
@@ -349,9 +417,7 @@ const RainCanvas: React.FC = () => {
 
   return (
     <>
-      {/* Layer 1 — rain drops + water ripples */}
       <canvas ref={rainCanvasRef} style={{ ...base, zIndex: 1, opacity: 0.88 }} />
-      {/* Layer 2 — lightning bolts + screen flash */}
       <canvas ref={boltCanvasRef} style={{ ...base, zIndex: 2 }} />
     </>
   );

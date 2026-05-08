@@ -84,7 +84,7 @@ const TYPE_STYLES: Record<string, string> = {
   "Full Stack":
     "bg-cyan-400/10 text-cyan-300 border border-cyan-400/30",
   Frontend:
-    "bg-violet-400/10 text-violet-300 border border-violet-400/30",
+    "bg-violet-400/10 text-violet-200 border border-violet-400/30",
 };
 
 export default function ProjectsSection() {
@@ -159,7 +159,7 @@ function ProjectCard({ project }: { project: (typeof projects)[number] }) {
           src={project.image}
           alt={project.title}
           className="w-full h-full object-cover transition-transform duration-500
-                     group-hover:scale-105"
+                     group-hover:scale-105 opacity-50"
           loading="lazy"
           onError={(e) => {
             (e.target as HTMLImageElement).src =
