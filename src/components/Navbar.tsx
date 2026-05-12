@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { GiArchiveResearch } from "react-icons/gi";
 import { ImConnection } from "react-icons/im";
+import { Link } from "react-router-dom";
 
 /* ─────────────────────────────────────────────────────────────────────────
    Types
@@ -501,7 +502,9 @@ export default function NavBar(): JSX.Element {
               color: "#00f5ff",
             }}
           >
-            AA
+            <Link to="/login">
+              AA  
+            </Link>
           </span>
 
           {/* Desktop links */}
