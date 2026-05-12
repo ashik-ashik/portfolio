@@ -176,18 +176,16 @@ const LoggedInView: React.FC<{ user: any; onLogout: () => void }> = ({
         {/* ── QUICK ACCESS CARDS ── */}
         <div className="grid grid-cols-2 gap-3">
           {cards.map((c) => (
-            <Link to={c?.link || '/career'}>
-                <button
-                key={c.label}
+            <Link to={c?.link || '/career'} key={c.label}
                 className={`group rounded-2xl border ${c.border} bg-gradient-to-br ${c.color} backdrop-blur-sm p-4 text-left hover:scale-[1.02] hover:shadow-lg transition-all duration-200`}
                 >
+                
                 <div className="flex items-start justify-between mb-3">
                     <div className={`${c.accent} opacity-90`}>{c.icon}</div>
                     <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
                 </div>
                 <p className="font-bold text-sm text-white">{c.label}</p>
                 <p className="text-[11px] text-gray-400 mt-0.5">{c.desc}</p>
-                </button>
             </Link>
           ))}
         </div>
