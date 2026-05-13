@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo } from "react";
 import { useCareerData } from "../hooks/useCareerData";
 import { HomeIcon } from "lucide-react";
@@ -405,7 +404,6 @@ const DashboardContent = ({ careerData }: DashboardContentProps) => {
               {[
                 { label: "Qualified",    count: overallQualified,   dot: "bg-emerald-400", text: "text-emerald-400" },
                 { label: "Unqualified",  count: overallUnqualified, dot: "bg-red-400",     text: "text-red-400" },
-                { label: "Pending (↔)", count: overallPending,     dot: "bg-amber-400",   text: "text-amber-400" },
                 { label: "Not Attained", count: overallNotAttained, dot: "bg-gray-500",    text: "text-gray-400" },
               ].map((item) => (
                 <div key={item.label} className="flex items-center justify-between">
