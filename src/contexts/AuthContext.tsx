@@ -26,7 +26,7 @@ export interface SheetUser {
 export interface AuthContextType {
   user: User | null;
 
-  usersList: SheetUser[];
+  currentUserInfo: SheetUser | null;
 
   userIsLoading: boolean;
 

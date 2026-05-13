@@ -33,6 +33,8 @@ const LoggedInView: React.FC<{ user: any; onLogout: () => void }> = ({
     .toUpperCase()
     .slice(0, 2);
 
+    const {currentUserInfo} = useAuth();
+
   const cards = [
     {
       icon: <LayoutDashboard className="w-5 h-5" />,
@@ -41,7 +43,9 @@ const LoggedInView: React.FC<{ user: any; onLogout: () => void }> = ({
       color: "from-cyan-500/20 to-cyan-500/5",
       border: "border-cyan-400/25",
       accent: "text-cyan-300",
-      link: "/career"
+      link: currentUserInfo?.Role === "ASH_SYSTEM_CORE"
+        ? "/career"
+        : "/"
     },
     {
       icon: <Activity className="w-5 h-5" />,
@@ -176,7 +180,7 @@ const LoggedInView: React.FC<{ user: any; onLogout: () => void }> = ({
         {/* ── QUICK ACCESS CARDS ── */}
         <div className="grid grid-cols-2 gap-3">
           {cards.map((c) => (
-            <Link to={c?.link || '/career'} key={c.label}
+            <Link to={c?.link || '/'} key={c.label}
                 className={`group rounded-2xl border ${c.border} bg-gradient-to-br ${c.color} backdrop-blur-sm p-4 text-left hover:scale-[1.02] hover:shadow-lg transition-all duration-200`}
                 >
                 

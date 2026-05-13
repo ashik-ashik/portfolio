@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -13,21 +14,24 @@ import {
 } from "firebase/auth";
 
 import { auth, provider } from "../services/firebase";
+
 import toast from "react-hot-toast";
+
 import AuthContext, {
   type AuthContextType,
 } from "../contexts/AuthContext";
-
+import MatrixLoader from "../components/MatrixLoader";
 
 // ================================
-// ENV TYPES
+// ENV
 // ================================
 
 const POST_USERS_API_URL: string =
-  import.meta.env.VITE_COLLECTION_SHEET_WRITE_URL;
+  import.meta.env
+    .VITE_COLLECTION_SHEET_WRITE_URL;
 
-const LoadUsersURL: string =
-  import.meta.env.VITE_USER_SHEET_READ_URL;
+const LOAD_USER_API_URL: string =
+  import.meta.env.VITE_SHEET_READ_URL;
 
 // ================================
 // TYPES
@@ -37,9 +41,9 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-interface SheetUser {
-  name: string;
+export interface SheetUser {
   role: string;
+  name: string;
   email: string;
   photoURL: string;
   uid: string;
@@ -48,8 +52,20 @@ interface SheetUser {
   provider: string;
   lastLoginAt: string;
 
-  // Allow extra dynamic sheet fields
+  // Extra optional sheet fields
   [key: string]: string;
+}
+
+export interface UserData {
+  role?: string;
+  name: string;
+  email: string;
+  photoURL: string;
+  uid: string;
+  emailVerified: string;
+  phoneNumber: string;
+  provider: string;
+  lastLoginAt: string;
 }
 
 interface LoginResponse {
@@ -57,15 +73,10 @@ interface LoginResponse {
   message?: string;
 }
 
-interface UserData {
-  name: string;
-  email: string;
-  photoURL: string;
-  uid: string;
-  emailVerified: string;
-  phoneNumber: string;
-  provider: string;
-  lastLoginAt: string;
+interface UserApiResponse {
+  success: boolean;
+  data: SheetUser | null;
+  message?: string;
 }
 
 // ================================
@@ -79,111 +90,205 @@ const AuthProvider = ({
   // STATES
   // ================================
 
-  const [user, setUser] = useState<User | null>(
-    null
-  );
+  const [user, setUser] =
+    useState<User | null>(null);
+
+  const [currentUserInfo, setCurrentUserInfo] =
+    useState<SheetUser | null>(null);
 
   const [userIsLoading, setUserIsLoading] =
     useState<boolean>(true);
 
-  const [usersList, setUsersList] = useState<
-    SheetUser[]
-  >([]);
+  const [authChecked, setAuthChecked] =
+    useState<boolean>(false);
+
+  // ================================
+  // LOAD CURRENT USER FROM SHEET
+  // ================================
+
+  const loadCurrentUser = async (
+  email: string
+): Promise<void> => {
+  try {
+    if (!email) {
+      setCurrentUserInfo(null);
+      return;
+    }
+console.log(email)
+    const response = await fetch(
+      `${LOAD_USER_API_URL}?action=users&email=${encodeURIComponent(
+        email
+      )}`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Failed to load user data"
+      );
+    }
+
+    const data: UserApiResponse =
+      await response.json();
+    if (
+      data.success &&
+      data.data
+    ) {
+      setCurrentUserInfo(data.data);
+    } else {
+      setCurrentUserInfo(null);
+    }
+  } catch (error: unknown) {
+    let errorMessage =
+      "Failed to load user";
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
+    console.error(
+      "Load User Error:",
+      errorMessage
+    );
+
+    toast.error(errorMessage);
+
+    setCurrentUserInfo(null);
+  }
+};
 
   // ================================
   // GOOGLE LOGIN
   // ================================
 
-  const googleLogin = async (): Promise<UserCredential> => {
-    try {
-      toast.loading(
-        "Signing in with Google...",
-        {
-          id: "login",
-        }
-      );
+  const googleLogin =
+    async (): Promise<UserCredential> => {
+      try {
+        setUserIsLoading(true);
 
-      // Firebase Login
-      const userResult: UserCredential =
-        await signInWithPopup(
-          auth,
-          provider
-        );
-
-      const loggedUser = userResult.user;
-
-      if (!loggedUser) {
-        toast.error(
-          "Login failed. No user found.",
+        toast.loading(
+          "Signing in with Google...",
           {
             id: "login",
           }
         );
 
-        throw new Error("No user found");
-      }
+        // Firebase Login
+        const userResult =
+          await signInWithPopup(
+            auth,
+            provider
+          );
 
-      // Prepare user data
-      const userData: UserData = {
-        name:
-          loggedUser.displayName || "",
+        const loggedUser =
+          userResult.user;
 
-        email:
-          loggedUser.email || "",
-
-        photoURL:
-          loggedUser.photoURL || "",
-
-        uid: loggedUser.uid || "",
-
-        emailVerified: String(
-          loggedUser.emailVerified || false
-        ),
-
-        phoneNumber:
-          loggedUser.phoneNumber || "",
-
-        provider:
-          loggedUser.providerData?.[0]
-            ?.providerId || "google",
-
-        lastLoginAt:
-          new Date().toLocaleString(),
-      };
-
-      // Send data to Sheet/API
-      const response = await fetch(
-        POST_USERS_API_URL,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type":
-              "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            action: "user",
-            role: "viewer",
-            name: userData.name,
-            email: userData.email,
-            photoURL:
-              userData.photoURL,
-            uid: userData.uid,
-            emailVerified:
-              userData.emailVerified,
-            phoneNumber:
-              userData.phoneNumber,
-            provider:
-              userData.provider,
-            lastLoginAt:
-              userData.lastLoginAt,
-          }),
+        if (!loggedUser) {
+          throw new Error(
+            "No user found"
+          );
         }
-      );
 
-      const data: LoginResponse =
-        await response.json();
+        // ================================
+        // USER DATA
+        // ================================
 
-      if (data.success) {
+        const userData: UserData = {
+          role: "viewer",
+
+          name:
+            loggedUser.displayName || "",
+
+          email:
+            loggedUser.email || "",
+
+          photoURL:
+            loggedUser.photoURL || "",
+
+          uid: loggedUser.uid,
+
+          emailVerified: String(
+            loggedUser.emailVerified
+          ),
+
+          phoneNumber:
+            loggedUser.phoneNumber || "",
+
+          provider:
+            loggedUser.providerData?.[0]
+              ?.providerId || "google",
+
+          lastLoginAt:
+            new Date().toLocaleString(),
+        };
+
+        // ================================
+        // SAVE USER TO SHEET
+        // ================================
+
+        const response = await fetch(
+          POST_USERS_API_URL,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/x-www-form-urlencoded",
+            },
+
+            body: new URLSearchParams({
+              action: "user",
+
+              role:
+                userData.role || "viewer",
+
+              name: userData.name,
+
+              email: userData.email,
+
+              photoURL:
+                userData.photoURL,
+
+              uid: userData.uid,
+
+              emailVerified:
+                userData.emailVerified,
+
+              phoneNumber:
+                userData.phoneNumber,
+
+              provider:
+                userData.provider,
+
+              lastLoginAt:
+                userData.lastLoginAt,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            "Failed to save user"
+          );
+        }
+
+        const data: LoginResponse =
+          await response.json();
+
+        if (!data.success) {
+          throw new Error(
+            data.message ||
+              "Failed to save user"
+          );
+        }
+
+        // ================================
+        // LOAD CURRENT USER DATA
+        // ================================
+
+        await loadCurrentUser(
+          userData.email
+        );
+
         toast.success(
           data.message ||
             "Login successful",
@@ -191,197 +296,155 @@ const AuthProvider = ({
             id: "login",
           }
         );
-      } else {
-        toast.error(
-          data.message ||
-            "Failed to save user",
-          {
-            id: "login",
-          }
+
+        return userResult;
+      } catch (error: unknown) {
+        let errorMessage =
+          "Login failed";
+
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        console.error(
+          "Google Login Error:",
+          errorMessage
         );
+
+        toast.error(errorMessage, {
+          id: "login",
+        });
+
+        throw error;
+      } finally {
+        setUserIsLoading(false);
       }
-
-      return userResult;
-    } catch (error: unknown) {
-      let errorMessage =
-        "Login failed";
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      console.log(errorMessage);
-
-      toast.error(errorMessage, {
-        id: "login",
-      });
-
-      throw error;
-    }
-  };
+    };
 
   // ================================
   // LOGOUT
   // ================================
 
-  const logout = (): Promise<void> => {
-    return signOut(auth);
-  };
+  const logout =
+    async (): Promise<void> => {
+      try {
+        toast.loading(
+          "Logging out...",
+          {
+            id: "logout",
+          }
+        );
+
+        await signOut(auth);
+
+        setCurrentUserInfo(null);
+
+        toast.success(
+          "Logged out successfully",
+          {
+            id: "logout",
+          }
+        );
+      } catch (error: unknown) {
+        let errorMessage =
+          "Logout failed";
+
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        toast.error(errorMessage, {
+          id: "logout",
+        });
+
+        throw error;
+      }
+    };
 
   // ================================
-  // CURRENT USER INFO
-  // ================================
-
-  const currentUserInfo:
-    | SheetUser
-    | undefined = usersList.find(
-    (item) =>
-      item.email?.toLowerCase() ===
-      user?.email?.toLowerCase()
-  );
-
-  // Role
-  const userRole: string | null =
-    currentUserInfo?.role || null;
-
-  // ================================
-  // LOAD USERS + AUTH STATE
+  // AUTH STATE LISTENER
   // ================================
 
   useEffect(() => {
     const unsubscribe =
       onAuthStateChanged(
         auth,
-        (currentUser: User | null) => {
-          setUser(currentUser);
+        async (
+          currentUser: User | null
+        ) => {
+          try {
+            setUserIsLoading(true);
+
+            setUser(currentUser);
+
+            // Load current user data automatically
+            if (
+              currentUser?.email
+            ) {
+              await loadCurrentUser(
+                currentUser.email
+              );
+            } else {
+              setCurrentUserInfo(
+                null
+              );
+            }
+          } catch (error) {
+            console.error(error);
+          } finally {
+            setAuthChecked(true);
+            setUserIsLoading(false);
+          }
         }
       );
-
-    const loadUsers =
-      async (): Promise<void> => {
-        setUserIsLoading(true);
-
-        try {
-          const res = await fetch(
-            LoadUsersURL
-          );
-
-          const data: string =
-            await res.text();
-
-          if (!data) {
-            console.log(
-              "No data found"
-            );
-
-            setUsersList([]);
-            return;
-          }
-
-          // CSV Lines
-          const lines: string[] =
-            data.trim().split("\n");
-
-          // Headers
-          const headers: string[] =
-            lines[0]
-              .split(",")
-              .map((header) =>
-                header.trim()
-              );
-
-          // Users
-          const users: SheetUser[] =
-            lines
-              .slice(1)
-              .map((line) => {
-                const values: string[] =
-                  line
-                    .split(
-                      /,(?=(?:(?:[^"]*"){2})*[^"]*$)/
-                    )
-                    .map((value) =>
-                      value
-                        .trim()
-                        .replace(
-                          /^"|"$/g,
-                          ""
-                        )
-                    );
-
-                const userObj: SheetUser =
-                  {
-                    name: "",
-                    role: "",
-                    email: "",
-                    photoURL: "",
-                    uid: "",
-                    emailVerified:
-                      "",
-                    phoneNumber:
-                      "",
-                    provider: "",
-                    lastLoginAt:
-                      "",
-                  };
-
-                headers.forEach(
-                  (
-                    header,
-                    index
-                  ) => {
-                    userObj[
-                      header
-                    ] =
-                      values[
-                        index
-                      ] || "";
-                  }
-                );
-
-                return userObj;
-              });
-
-          setUsersList(users);
-        } catch (error: unknown) {
-          let errorMessage =
-            "Unknown Error";
-
-          if (
-            error instanceof Error
-          ) {
-            errorMessage =
-              error.message;
-          }
-
-          console.log(
-            "Load Users Error:",
-            errorMessage
-          );
-
-          setUsersList([]);
-        } finally {
-          setUserIsLoading(false);
-        }
-      };
-
-    loadUsers();
 
     return () => unsubscribe();
   }, []);
 
   // ================================
+  // USER ROLE
+  // ================================
+
+  const userRole: string | null =
+    useMemo(() => {
+      return (
+        currentUserInfo?.Role ||
+        null
+      );
+    }, [currentUserInfo]);
+
+  // ================================
   // CONTEXT VALUE
   // ================================
 
- const authInfo: AuthContextType = {
-  user,
-  usersList,
-  userIsLoading,
-  googleLogin,
-  logout,
-  userRole,
-};
+  const authInfo: AuthContextType = {
+    user,
+
+    currentUserInfo,
+
+    userIsLoading,
+
+    googleLogin,
+
+    logout,
+
+    userRole,
+  };
+
+
+  // ================================
+  // LOADER BEFORE AUTH CHECK
+  // ================================
+
+  if (!authChecked) {
+    return (
+      <MatrixLoader />
+    );
+  }
+
+  // ================================
+  // PROVIDER
+  // ================================
 
   return (
     <AuthContext.Provider
