@@ -4,6 +4,8 @@ import CustomCursor from "./components/CustomCursor";
 import LoginPage from "./pages/LoginPage";
 import { Toaster } from "react-hot-toast";
 import CareerDashboard from "./pages/CareerDashborad";
+import ASHroute from "./components/ASHroute";
+import NotFound404 from "./pages/NotFound";
 
 
 
@@ -18,7 +20,8 @@ function App() {
         <Routes>
           <Route path="/" element={<Homepage />}/>
           <Route path="/login" element={<LoginPage />}/>
-          <Route path="/career" element={<CareerDashboard />}/>
+          <Route path="/career" element={<ASHroute><CareerDashboard /></ASHroute>}/>
+          <Route path="/*" element={<NotFound404 />}/>
         </Routes>
       </BrowserRouter>
       

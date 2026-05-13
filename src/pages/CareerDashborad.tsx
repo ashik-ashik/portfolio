@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
-import { useCareerData } from "../hooks/useCareerData";
 import { HomeIcon } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useCareerData } from "../hooks/useCareerData";
+import MatrixLoader from "../components/MatrixLoader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,9 @@ type RoundStats = {
 // Round cols:  "Qualified" | "Unqualified" | "Not Attaint" | "↔" | ""
 //   "↔"         → appeared, result awaited
 //   "Not Attaint"→ exam was held but candidate didn't sit this round
+
+
+
 
 function isExamDone(val?: string): boolean {
   return val?.trim().toLowerCase() === "done";
@@ -286,6 +290,8 @@ const DashboardContent = ({ careerData }: DashboardContentProps) => {
   const stats = useMemo(() => {
     const total = careerData.length;
 
+    
+
     // ExamStatus buckets
     const examDone   = careerData.filter((d) => isExamDone(d.ExamStatus)).length;
     const examFuture = careerData.filter((d) => isExamFuture(d.ExamStatus)).length;
@@ -353,6 +359,10 @@ const DashboardContent = ({ careerData }: DashboardContentProps) => {
   const overallUnqualified = prelim.unqualified  + written.unqualified  + viva.unqualified;
   const overallPending     = prelim.pending      + written.pending      + viva.pending;
   const overallNotAttained = prelim.not_attained + written.not_attained + viva.not_attained;
+  const {loading} = useCareerData();
+  if(loading){
+    return <MatrixLoader />
+  }
 
   return (
     <div className="flex-1 overflow-y-auto bg-gray-950 p-6 space-y-6">

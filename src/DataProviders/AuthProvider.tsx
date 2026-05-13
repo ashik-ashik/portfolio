@@ -114,7 +114,6 @@ const AuthProvider = ({
       setCurrentUserInfo(null);
       return;
     }
-console.log(email)
     const response = await fetch(
       `${LOAD_USER_API_URL}?action=users&email=${encodeURIComponent(
         email

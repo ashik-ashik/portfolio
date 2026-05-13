@@ -12,7 +12,7 @@ function pick<T>(...args: T[]): T {
 
 function getChar(): string {
   return String.fromCharCode(
-    pick(r(0x3041, 0x30ff), r(0x2000, 0x206f), r(0x0020, 0x003f))
+    pick(r(0, 1), r(1, 0), r(1, 1))
   );
 }
 
@@ -104,7 +104,7 @@ class Rain {
       const c = new Char();
       c.element.style.cssText =
         "display:block;width:2vmax;height:2vmax;font-size:2vmax;" +
-        'color:#9bff9b11;text-align:center;font-family:"Helvetica Neue",Helvetica,sans-serif;';
+        'color:#9bff9b11;text-align:center;font-family:"sans-serif;';
       frag.appendChild(c.element);
       this.chars.push(c);
       if (Math.random() < 0.5) c.startMutating();
