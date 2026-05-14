@@ -1,8 +1,10 @@
 import { createContext } from "react";
-import type { CareerRow } from "../services/careerDataTypes";
+import type { AcademicRow, CareerRow, PersonalRow } from "../services/careerDataTypes";
 
 export interface CareerDataContextType {
   careerData: CareerRow[];
+  Academic: AcademicRow[];
+  Personal: PersonalRow[];
   setCareerData: React.Dispatch<React.SetStateAction<CareerRow[]>>;
   loading: boolean;
   setLoading: React.Dispatch<React.SetStateAction<boolean>>;

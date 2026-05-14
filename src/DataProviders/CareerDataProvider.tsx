@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
-import type { CareerRow } from "../services/careerDataTypes";
+import type { CareerRow, AcademicRow, PersonalRow } from "../services/careerDataTypes";
 import { CareerDataContext } from "../contexts/CareerDataContext";
+import useAuth from "../hooks/useAuth";
 
 interface Props {
   children: React.ReactNode;
@@ -9,45 +10,100 @@ interface Props {
 
 
 const Read_Career_Info = import.meta.env.VITE_SHEET_READ_URL;
+const Read_Academic_Info = import.meta.env.VITE_READ_PERSONAL_INFO_URL;
+const Read_Personal_Info = import.meta.env.VITE_READ_PERSONAL_INFO_URL;
 
 
 export const CareerDataProvider: React.FC<Props> = ({ children }) => {
   const [careerData, setCareerData] = useState<CareerRow[]>([]);
+  const [Personal, setPersonal] = useState<PersonalRow[]>([]);
+  const [Academic, setAcademic] = useState<AcademicRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const {currentUserInfo} = useAuth();
+
+  // console.log()
 
   
   useEffect(() => {
       const fetchCareerData = async () => {
         try {
+
+          
           setLoading(true);
           setError(null);
-    
-          const res = await fetch(
-            `${Read_Career_Info}?action=career`
+    // ############################################################################
+          // Read Career Info
+    // ############################################################################
+          const CareerDataRES = await fetch(
+            `${Read_Career_Info}?action=career&user${currentUserInfo?.Role}`
           );
     
-          if (!res.ok) {
+          if (!CareerDataRES.ok) {
             throw new Error("Failed to load career data");
           }
     
-          const data = await res.json();
+          const CareerData = await CareerDataRES.json();
           // Optional: ensure array safety
-          setCareerData(data.data);
+          setCareerData(CareerData.data);
+
+    // ############################################################################
+          // Read Personal info Personal
+    // ############################################################################
+          const PersonalDataRES = await fetch(
+            `${Read_Personal_Info}?action=personal`
+          );
+    
+          if (!PersonalDataRES.ok) {
+            throw new Error("Failed to load career data");
+          }
+    
+          const PersonalData = await PersonalDataRES.json();
+          // Optional: ensure array safety
+          
+          setPersonal(PersonalData.data);
+
+    // ############################################################################
+          // Read Personal info ACADEMIC
+    // ############################################################################
+          const AcademicDataRES = await fetch(
+            `${Read_Academic_Info}?action=academic&user${import.meta.env.VITE_ASH_ADMIN_SECRET_ROLE}`
+          );
+    
+          if (!AcademicDataRES.ok) {
+            throw new Error("Failed to load career data");
+          }
+    
+          const AcademicData = await AcademicDataRES.json();
+          // Optional: ensure array safety
+          setAcademic(AcademicData.data);
+
+
+
+
+
         } catch (err: any) {
           setError(err.message || "Unknown error");
         } finally {
           setLoading(false);
         }
       };
+
+
+
+
+
+
     fetchCareerData();
-  }, []);
+  }, [currentUserInfo]);
 
 
   return (
     <CareerDataContext.Provider
       value={{
         careerData,
+        Academic,
+        Personal,
         setCareerData,
         loading,
         setLoading,

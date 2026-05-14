@@ -49,11 +49,14 @@ const LoggedInView: React.FC<{ user: any; onLogout: () => void }> = ({
     },
     {
       icon: <Activity className="w-5 h-5" />,
-      label: "Activity",
+      label: "Personal",
       desc: "Recent actions & logs",
       color: "from-blue-500/20 to-blue-500/5",
       border: "border-blue-400/25",
       accent: "text-blue-300",
+      link: currentUserInfo?.Role === "ASH_SYSTEM_CORE"
+        ? "/personal"
+        : "/"
     },
     {
       icon: <Star className="w-5 h-5" />,

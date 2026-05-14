@@ -14,3 +14,22 @@ export interface CareerRow {
   written?: string;
   viva?: string;
 }
+
+export interface PersonalRow {
+  Title: string;
+  Information: string;
+}
+
+
+export interface AcademicRow {
+Level: string;
+Board: string;
+InstituteName: string;
+Roll: string;
+Registration: string;
+StudentID: string;
+PassingYear: string;
+ResultPublishDate: string;
+Result: string;
+MajorGroup: string;
+}
