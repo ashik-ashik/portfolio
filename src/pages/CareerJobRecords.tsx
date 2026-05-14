@@ -513,7 +513,7 @@ if (search.trim()) {
                     className={`group cursor-pointer border-b border-gray-800/50 hover:brightness-125 transition-all duration-100 ${meta.rowBg} ${meta.rowBorder}`}
                   >
                     {/* SL */}
-                    <td className="px-3 py-2.5 text-gray-600 font-mono w-8">
+                    <td className="px-3 py-2.5 text-gray-600 font-mono w-8 text-nowrap">
                       {record.SL || String(idx + 1)}
                     </td>
 
