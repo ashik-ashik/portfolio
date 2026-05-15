@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
-import type { CareerRow, AcademicRow, PersonalRow } from "../services/careerDataTypes";
+import type { CareerRow, AcademicRow, PersonalRow, CertificatesRow } from "../services/careerDataTypes";
 import { CareerDataContext } from "../contexts/CareerDataContext";
 import useAuth from "../hooks/useAuth";
 
@@ -10,7 +10,6 @@ interface Props {
 
 
 const Read_Career_Info = import.meta.env.VITE_SHEET_READ_URL;
-const Read_Academic_Info = import.meta.env.VITE_READ_PERSONAL_INFO_URL;
 const Read_Personal_Info = import.meta.env.VITE_READ_PERSONAL_INFO_URL;
 
 
@@ -18,6 +17,7 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
   const [careerData, setCareerData] = useState<CareerRow[]>([]);
   const [Personal, setPersonal] = useState<PersonalRow[]>([]);
   const [Academic, setAcademic] = useState<AcademicRow[]>([]);
+  const [Certificates, setCertificates] = useState<CertificatesRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const {currentUserInfo} = useAuth();
@@ -67,7 +67,7 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
           // Read Personal info ACADEMIC
     // ############################################################################
           const AcademicDataRES = await fetch(
-            `${Read_Academic_Info}?action=academic&user${import.meta.env.VITE_ASH_ADMIN_SECRET_ROLE}`
+            `${Read_Personal_Info}?action=academic`
           );
     
           if (!AcademicDataRES.ok) {
@@ -77,6 +77,21 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
           const AcademicData = await AcademicDataRES.json();
           // Optional: ensure array safety
           setAcademic(AcademicData.data);
+
+    // ############################################################################
+          // Read Personal info Certificates
+    // ############################################################################
+          const CertificatesDataRES = await fetch(
+            `${Read_Personal_Info}?action=certificates`
+          );
+    
+          if (!CertificatesDataRES.ok) {
+            throw new Error("Failed to load career data");
+          }
+    
+          const CertificatesData = await CertificatesDataRES.json();
+          // Optional: ensure array safety
+          setCertificates(CertificatesData.data);
 
 
 
@@ -104,6 +119,7 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
         careerData,
         Academic,
         Personal,
+        Certificates,
         setCareerData,
         loading,
         setLoading,

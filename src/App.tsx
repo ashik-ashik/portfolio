@@ -7,11 +7,12 @@ import CareerDashboard from "./pages/CareerDashborad";
 import ASHroute from "./components/ASHroute";
 import NotFound404 from "./pages/NotFound";
 import PersonalDashboard from "./pages/PersonalDashboard";
+import useAuth from "./hooks/useAuth";
 
 
 
 function App() {
-
+const {user} = useAuth();
   
   return (
     <div>
@@ -20,7 +21,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Homepage />}/>
-          <Route path="/login" element={<LoginPage />}/>
+          <Route path={`${user && !user.email ? '/login' : '/account'}`} element={<LoginPage />}/>
           <Route path="/career" element={<ASHroute><CareerDashboard /></ASHroute>}/>
           <Route path="/personal" element={<ASHroute><PersonalDashboard /></ASHroute>}/>
           <Route path="/*" element={<NotFound404 />}/>

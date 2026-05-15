@@ -16,6 +16,7 @@ import {
 import { GiArchiveResearch } from "react-icons/gi";
 import { ImConnection } from "react-icons/im";
 import { Link } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
 
 /* ─────────────────────────────────────────────────────────────────────────
    Types
@@ -417,7 +418,7 @@ export default function NavBar(): JSX.Element {
   const [menuOpen, setMenuOpen] = useState<boolean>(false);
   const [menuOrigin, setMenuOrigin] = useState<Origin>({ x: 0, y: 0 });
   const hamburgerRef = useRef<HTMLButtonElement>(null);
-
+  const {user} = useAuth();
   /* Lock body scroll */
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -502,7 +503,7 @@ export default function NavBar(): JSX.Element {
               color: "#00f5ff",
             }}
           >
-            <Link to="/login">
+            <Link to={`${user && !user.email ? '/login' : '/account'}`}>
               AA  
             </Link>
           </span>

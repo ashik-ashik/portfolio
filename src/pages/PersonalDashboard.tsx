@@ -3,6 +3,7 @@ import PersonalInfo from "./PersonalInfo";
 import Education from "./Education";
 import { useCareerData } from "../hooks/useCareerData";
 import MatrixLoader from "../components/MatrixLoader";
+import Certifications from "./Certifications";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -339,9 +340,9 @@ const PAGE_META: Record<NavId, { title: string; subtitle: string; color: string 
   "personal-info":   { title: "Personal Info",    subtitle: "Your identity & contact details",        color: "from-amber-600/20 to-transparent" },
   "education":       { title: "Education",         subtitle: "Academic history & qualifications",       color: "from-sky-600/20 to-transparent" },
   "skills":          { title: "Skills",            subtitle: "Technical & professional competencies",   color: "from-emerald-600/20 to-transparent" },
+  "certifications":  { title: "Certifications",    subtitle: "Verified credentials & achievements",     color: "from-orange-600/20 to-transparent" },
   "experience":      { title: "Experience",        subtitle: "Work history & professional journey",     color: "from-violet-600/20 to-transparent" },
   "projects":        { title: "Projects",          subtitle: "Portfolio of work & contributions",       color: "from-rose-600/20 to-transparent" },
-  "certifications":  { title: "Certifications",    subtitle: "Verified credentials & achievements",     color: "from-orange-600/20 to-transparent" },
   "settings":        { title: "Settings",          subtitle: "Preferences & configuration",             color: "from-gray-600/20 to-transparent" },
 };
 
@@ -418,11 +419,11 @@ const renderPage = (id: NavId): React.ReactNode => {
   switch (id) {
     case "personal-info":   return <PersonalInfo />;
     case "education":     return <Education />;
+    case "certifications":return <Certifications />;
     // Uncomment and import as you build each component:
     // case "skills":        return <Skills />;
     // case "experience":    return <Experience />;
     // case "projects":      return <Projects />;
-    // case "certifications":return <Certifications />;
     // case "settings":      return <Settings />;
     default:                return <PlaceholderPage id={id} />;
   }

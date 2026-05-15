@@ -19,6 +19,15 @@ export interface PersonalRow {
   Title: string;
   Information: string;
 }
+export interface CertificatesRow {
+  Title: string;
+  Institute: string;
+  Year: number;
+  Topics: string;
+  Description: string;
+  Duration: string;
+  FileId: string;
+}
 
 
 export interface AcademicRow {
