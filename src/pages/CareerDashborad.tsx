@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { useCareerData } from "../hooks/useCareerData";
 import MatrixLoader from "../components/MatrixLoader";
 import CareerJobRecords from "./CareerJobRecords";
+import AddCareerData from "./AddCareerData";
+import EditCareerData from "./EditCareerData";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -605,8 +607,8 @@ const CareerDashboard = () => {
   const renderContent = () => {
     switch (activeNav) {
       case "dashboard": return <DashboardContent careerData={careerData as Career[]} />;
-      case "add":       return <Placeholder title="Add Info"  description="Your AddInfo component renders here." />;
-      case "edit":      return <Placeholder title="Edit Info" description="Your EditInfo component renders here." />;
+      case "add":       return <AddCareerData />;
+      case "edit":      return <EditCareerData />;
       case "records":   return <CareerJobRecords />;
       case "settings":  return <Placeholder title="Settings"  description="Your Settings component renders here." />;
       default:          return <DashboardContent careerData={careerData as Career[]} />;
@@ -614,7 +616,7 @@ const CareerDashboard = () => {
   };
 
   return (
-    <section className="flex h-screen w-full overflow-hidden bg-gray-950 text-white">
+    <section className="flex h-screen w-full overflow-y-auto bg-gray-950 text-white">
       <Sidebar
         expanded={sidebarExpanded}
         setExpanded={setSidebarExpanded}

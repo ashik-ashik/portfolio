@@ -1,7 +1,7 @@
 export type ExamStatus = "Done" | "Future" | "Pending" | string;
 
 export interface CareerRow {
-  sl?: number | string;
+  SL?: number | string;
   institute?: string;
   position?: string;
   userId?: string;

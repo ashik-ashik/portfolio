@@ -9,7 +9,7 @@ interface Props {
 }
 
 
-const Read_Career_Info = import.meta.env.VITE_SHEET_READ_URL;
+const Read_Career_Info = import.meta.env.VITE_CAREER_SHEET_READ_WRITE_API_URL;
 const Read_Personal_Info = import.meta.env.VITE_READ_PERSONAL_INFO_URL;
 
 

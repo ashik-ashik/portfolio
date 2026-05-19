@@ -31,7 +31,7 @@ const POST_USERS_API_URL: string =
     .VITE_COLLECTION_SHEET_WRITE_URL;
 
 const LOAD_USER_API_URL: string =
-  import.meta.env.VITE_SHEET_READ_URL;
+  import.meta.env.VITE_CAREER_SHEET_READ_WRITE_API_URL;
 
 // ================================
 // TYPES
