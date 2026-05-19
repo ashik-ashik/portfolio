@@ -286,7 +286,7 @@ export default function EditCareerData() {
       {/* Search bar */}
       <div className="mb-5 p-5 rounded-2xl border border-slate-800 bg-slate-900/50">
         <EntrySearchBar
-          entries={careerData as CareerEntry[]}
+          entries={careerData.reverse() as CareerEntry[]}
           selected={selectedEntry}
           onSelect={handleEntrySelect}
         />

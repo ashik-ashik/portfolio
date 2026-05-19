@@ -229,57 +229,61 @@ interface SidebarProps {
 }
 const Sidebar = ({ expanded, setExpanded, active, setActive }: SidebarProps) => (
   <aside className={`flex flex-col bg-gray-950 border-r border-gray-800 h-full transition-all duration-300 ease-in-out ${expanded ? "w-56" : "w-16"}`}>
-    {/* Top toggle */}
-    <div className="flex items-center justify-between p-3 border-b border-gray-800 min-h-[56px]">
-      {expanded && (
-        <span className="text-xs font-bold tracking-[0.2em] uppercase text-gray-300 pl-1 select-none">Career</span>
+    
+    <div className="fixed">
+      {/* Top toggle */}
+      <div className="flex items-center justify-between p-3 border-b border-gray-800 min-h-[56px]">
+        {expanded && (
+          <span className="text-xs font-bold tracking-[0.2em] uppercase text-gray-300 pl-1 select-none">Career</span>
+        )}
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors duration-150 ml-auto"
+          title={expanded ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {expanded ? <IconChevronLeft /> : <IconChevronRight />}
+        </button>
+      </div>
+
+      {/* Hamburger hint when collapsed */}
+      {!expanded && (
+        <div className="flex justify-center pt-2 pb-1">
+          <span className="text-gray-500"><IconMenu /></span>
+        </div>
       )}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-100 hover:bg-gray-800 transition-colors duration-150 ml-auto"
-        title={expanded ? "Collapse sidebar" : "Expand sidebar"}
-      >
-        {expanded ? <IconChevronLeft /> : <IconChevronRight />}
-      </button>
-    </div>
 
-    {/* Hamburger hint when collapsed */}
-    {!expanded && (
-      <div className="flex justify-center pt-2 pb-1">
-        <span className="text-gray-500"><IconMenu /></span>
-      </div>
-    )}
+      {/* Nav items */}
+      <nav className="flex flex-col gap-1 p-2 flex-1 mt-1">
+        <Link to="/" className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-all duration-150 text-left w-full text-gray-400 hover:text-gray-100 hover:bg-gray-800/70`}><HomeIcon /></Link>
+        {NAV_ITEMS.map((item) => {
+          const isActive = active === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActive(item.id)}
+              title={!expanded ? item.label : undefined}
+              className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-all duration-150 text-left w-full border
+                ${isActive
+                  ? "bg-indigo-600/20 text-indigo-300 border-indigo-600/30"
+                  : "text-gray-400 hover:text-gray-100 hover:bg-gray-800/70 border-transparent"
+                }`}
+            >
+              <span className="shrink-0">{item.icon}</span>
+              {expanded && <span className="text-sm font-medium whitespace-nowrap overflow-hidden">{item.label}</span>}
+            </button>
+          );
+        })}
+      </nav>
 
-    {/* Nav items */}
-    <nav className="flex flex-col gap-1 p-2 flex-1 mt-1">
-      <Link to="/" className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-all duration-150 text-left w-full text-gray-400 hover:text-gray-100 hover:bg-gray-800/70`}><HomeIcon /></Link>
-      {NAV_ITEMS.map((item) => {
-        const isActive = active === item.id;
-        return (
-          <button
-            key={item.id}
-            onClick={() => setActive(item.id)}
-            title={!expanded ? item.label : undefined}
-            className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-all duration-150 text-left w-full border
-              ${isActive
-                ? "bg-indigo-600/20 text-indigo-300 border-indigo-600/30"
-                : "text-gray-400 hover:text-gray-100 hover:bg-gray-800/70 border-transparent"
-              }`}
-          >
-            <span className="shrink-0">{item.icon}</span>
-            {expanded && <span className="text-sm font-medium whitespace-nowrap overflow-hidden">{item.label}</span>}
-          </button>
-        );
-      })}
-    </nav>
-
-    {/* Status dot */}
-    <div className="p-3 border-t border-gray-800">
-      <div className={`flex items-center gap-2 ${!expanded && "justify-center"}`}>
-        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
-        {expanded && <span className="text-xs text-gray-400">System Online</span>}
+      {/* Status dot */}
+      <div className="p-3 border-t border-gray-800">
+        <div className={`flex items-center gap-2 ${!expanded && "justify-center"}`}>
+          <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+          {expanded && <span className="text-xs text-gray-400">System Online</span>}
+        </div>
       </div>
     </div>
+      
   </aside>
 );
 
