@@ -1,5 +1,4 @@
 /* eslint-disable react-hooks/static-components */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo } from "react";
 import { useCareerData } from "../hooks/useCareerData";
 
@@ -281,7 +280,7 @@ const CareerJobRecords = () => {
   const [tab, setTab]                     = useState<Tab>("upcoming");
   const [search, setSearch]               = useState("");
   const [sortKey, setSortKey]             = useState<SortKey>("ApplyDate");
-  const [sortDir, setSortDir]             = useState<SortDir>("asc");
+  const [sortDir, setSortDir]             = useState<SortDir>("desc");
   const [filterVariant, setFilterVariant] = useState<RowVariant | "all">("all");
   const [showCredentials, setShowCredentials] = useState(false);
   const [selectedRecord, setSelectedRecord]   = useState<Career | null>(null);
@@ -298,7 +297,10 @@ const CareerJobRecords = () => {
 
   const activeData = tab === "upcoming" ? upcoming : done;
 
-  // Filter + search + sort
+
+ 
+
+//   // Filter + search + sort
   const processed = useMemo(() => {
     let rows = [...activeData];
 
@@ -328,17 +330,22 @@ if (search.trim()) {
   );
 }
 
-    // Sort
-    rows.sort((a, b) => {
-      const av = (a[sortKey] ?? "").toString().toLowerCase();
-      const bv = (b[sortKey] ?? "").toString().toLowerCase();
-      if (av < bv) return sortDir === "asc" ? -1 : 1;
-      if (av > bv) return sortDir === "asc" ? 1  : -1;
-      return 0;
-    });
+    // Sort by ApplyDate properly
+      rows.sort((a, b) => {
+        const av = a.ApplyDate
+          ? new Date(a.ApplyDate).getTime()
+          : 0;
+
+        const bv = b.ApplyDate
+          ? new Date(b.ApplyDate).getTime()
+          : 0;
+
+        return sortDir === "asc" ? av - bv : bv - av;
+      });
+    rows.reverse();
 
     return rows;
-  }, [activeData, filterVariant, search, sortKey, sortDir]);
+  }, [activeData, filterVariant, search, sortDir]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -554,7 +561,11 @@ if (search.trim()) {
 
                     {/* Apply Date */}
                     <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap font-mono">
-                      {formatDate(record.ApplyDate)}
+                      {record.ApplyDate
+                        ? new Intl.DateTimeFormat("en-CA", {
+                            timeZone: "UTC",
+                          }).format(new Date(record.ApplyDate))
+                        : ""}
                     </td>
 
                     {/* Exam Status */}

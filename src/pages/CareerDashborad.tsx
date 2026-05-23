@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { HomeIcon } from "lucide-react";
+import { HomeIcon, PersonStandingIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCareerData } from "../hooks/useCareerData";
 import MatrixLoader from "../components/MatrixLoader";
@@ -254,7 +254,8 @@ const Sidebar = ({ expanded, setExpanded, active, setActive }: SidebarProps) => 
 
       {/* Nav items */}
       <nav className="flex flex-col gap-1 p-2 flex-1 mt-1">
-        <Link to="/" className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-all duration-150 text-left w-full text-gray-400 hover:text-gray-100 hover:bg-gray-800/70`}><HomeIcon /></Link>
+        <Link to="/" className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-all duration-150 text-left w-full text-gray-400 hover:text-gray-100 hover:bg-gray-800/70`}><HomeIcon size={20} />{expanded?"Home":""}</Link>
+        <Link to="/personal" className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-all duration-150 text-left w-full text-gray-400 hover:text-gray-100 hover:bg-gray-800/70`}><PersonStandingIcon />{expanded?"Personal":""}</Link>
         {NAV_ITEMS.map((item) => {
           const isActive = active === item.id;
           return (

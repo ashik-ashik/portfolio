@@ -4,6 +4,10 @@ import Education from "./Education";
 import { useCareerData } from "../hooks/useCareerData";
 import MatrixLoader from "../components/MatrixLoader";
 import Certifications from "./Certifications";
+import { Link } from "react-router-dom";
+import { LiaHomeSolid } from "react-icons/lia";
+import { AiOutlineCopyrightCircle } from "react-icons/ai";
+
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -141,12 +145,14 @@ const Avatar = ({ collapsed }: { collapsed: boolean }) => (
     <div className="absolute inset-[3px] rounded-full border border-amber-600/20" />
     {/* Monogram */}
     <div className="absolute inset-[4px] rounded-full bg-gradient-to-br from-amber-800/60 to-amber-950/80 flex items-center justify-center">
+    <Link to='/account'>
       <span
         className={`font-bold text-amber-300 transition-all duration-300 ${collapsed ? "text-[9px]" : "text-sm"}`}
         style={{ fontFamily: "'Georgia', serif", letterSpacing: "0.05em" }}
       >
         ME
       </span>
+    </Link>
     </div>
     {/* Online dot */}
     {!collapsed && (
@@ -279,6 +285,8 @@ const Sidebar = ({ collapsed, setCollapsed, activeId, setActiveId }: SidebarProp
 
       {/* ── Nav ── */}
       <nav className="relative z-10 flex-1 overflow-y-auto py-2 px-2 space-y-0.5 scrollbar-none">
+        <Link to="/" className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-all duration-150 text-left w-full text-gray-400 hover:text-gray-100 hover:bg-gray-800/70`}><LiaHomeSolid size={18} />{collapsed ? "":"Home"}</Link>
+        <Link to="/career" className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 transition-all duration-150 text-left w-full text-gray-400 hover:text-gray-100 hover:bg-gray-800/70`}><AiOutlineCopyrightCircle size={18} />{collapsed ? "":"Career"}</Link>
         {grouped.map(({ section, items }) => (
           <div key={section}>
             <SectionDivider label={section} collapsed={collapsed} />
