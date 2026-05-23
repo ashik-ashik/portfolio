@@ -287,7 +287,6 @@ const Certifications = () => {
         c.Title,
         c.Institute,
         c.Topics,
-        c.Description,
         String(c.Year),
       ]
         .join(" ")
