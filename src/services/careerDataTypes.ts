@@ -42,3 +42,14 @@ ResultPublishDate: string;
 Result: string;
 MajorGroup: string;
 }
+
+export interface JobCircular {
+  Timestamp: string;
+  InstitutionName: string;
+  PostName: string;
+  NumberOfPosts: number;
+  ApplyStart: string;
+  ApplyEnds: string;
+  CircularFile: string;
+  PositionGrade: number;
+}

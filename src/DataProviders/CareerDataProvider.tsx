@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState } from "react";
-import type { CareerRow, AcademicRow, PersonalRow, CertificatesRow } from "../services/careerDataTypes";
+import type { CareerRow, AcademicRow, PersonalRow, CertificatesRow, JobCircular } from "../services/careerDataTypes";
 import { CareerDataContext } from "../contexts/CareerDataContext";
 import useAuth from "../hooks/useAuth";
 
@@ -16,6 +16,7 @@ const Read_Personal_Info = import.meta.env.VITE_READ_PERSONAL_INFO_URL;
 export const CareerDataProvider: React.FC<Props> = ({ children }) => {
   const [careerData, setCareerData] = useState<CareerRow[]>([]);
   const [Personal, setPersonal] = useState<PersonalRow[]>([]);
+  const [availableJobData, setAvailableJobData] = useState<JobCircular[]>([]);
   const [Academic, setAcademic] = useState<AcademicRow[]>([]);
   const [Certificates, setCertificates] = useState<CertificatesRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -92,6 +93,23 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
           const CertificatesData = await CertificatesDataRES.json();
           // Optional: ensure array safety
           setCertificates(CertificatesData.data);
+    
+    
+    
+          // ############################################################################
+          // Ongoing job circular
+    // ############################################################################
+          const availableJobDataDataRES = await fetch(
+            `${Read_Career_Info}?action=getAvailableJobs`
+          );
+    
+          if (!availableJobDataDataRES.ok) {
+            throw new Error("Failed to load career data");
+          }
+    
+          const availableJobDataData = await availableJobDataDataRES.json();
+          // Optional: ensure array safety
+          setAvailableJobData(availableJobDataData.data);
 
 
 
@@ -120,6 +138,7 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
         Academic,
         Personal,
         Certificates,
+        availableJobData,
         setCareerData,
         loading,
         setLoading,

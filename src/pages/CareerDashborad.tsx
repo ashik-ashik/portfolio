@@ -6,6 +6,7 @@ import MatrixLoader from "../components/MatrixLoader";
 import CareerJobRecords from "./CareerJobRecords";
 import AddCareerData from "./AddCareerData";
 import EditCareerData from "./EditCareerData";
+import AvailableJobListsToApply from "./AvailableJobListsToApply";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -218,6 +219,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: "add",       label: "Add Info",  icon: <IconAdd />,       path: "/career/add" },
   { id: "edit",      label: "Edit Info", icon: <IconEdit />,      path: "/career/edit" },
   { id: "records",   label: "Records",   icon: <IconList />,      path: "/career/records" },
+  { id: "ongoingjobs",   label: "Ongoing Circular",   icon: <IconList />,      path: "/career/ongoingjobs" },
   { id: "settings",  label: "Settings",  icon: <IconSettings />,  path: "/career/settings" },
 ];
 
@@ -615,6 +617,7 @@ const CareerDashboard = () => {
       case "add":       return <AddCareerData />;
       case "edit":      return <EditCareerData />;
       case "records":   return <CareerJobRecords />;
+      case "ongoingjobs":   return <AvailableJobListsToApply />;
       case "settings":  return <Placeholder title="Settings"  description="Your Settings component renders here." />;
       default:          return <DashboardContent careerData={careerData as Career[]} />;
     }
