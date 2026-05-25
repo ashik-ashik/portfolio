@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Homepage from "./pages/HomePage";
-import CustomCursor from "./components/CustomCursor";
+// import CustomCursor from "./components/CustomCursor";
 import LoginPage from "./pages/LoginPage";
 import { Toaster } from "react-hot-toast";
 import CareerDashboard from "./pages/CareerDashborad";
@@ -17,7 +17,7 @@ const {user} = useAuth();
   
   return (
     <div>
-      <CustomCursor />
+      {/* <CustomCursor /> */}
       <Toaster />
       <BrowserRouter>
         <Routes>

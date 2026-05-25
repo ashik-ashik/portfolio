@@ -90,7 +90,7 @@ function EntrySearchBar({
 
   return (
     <div ref={ref} className="relative">
-      <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-400 mb-1.5 block">
+      <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-200 mb-1.5 block">
         Search & Select Entry <span className="text-rose-400">*</span>
       </label>
       <div className="relative">
@@ -136,7 +136,7 @@ function EntrySearchBar({
                   selected?.SL === entry.SL ? "bg-violet-500/10" : ""
                 }`}
               >
-                <span className="font-mono text-[11px] text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded px-1.5 py-0.5 shrink-0">
+                <span className="font-mono text-[11px] text-violet-100 bg-violet-500/10 border border-violet-500/20 rounded px-2.5 py-0.5 shrink-0">
                   {entry.SL}
                 </span>
                 <div className="min-w-0">
@@ -168,7 +168,7 @@ function EntrySearchBar({
 function DiffIndicator({ original, current }: { original: string; current: string }) {
   if (!original || original === current) return null;
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-1.5 py-0.5 ml-1">
+    <span className="inline-flex items-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded px-2.5 py-0.5 ml-1">
       <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
       </svg>
@@ -278,7 +278,7 @@ export default function EditCareerData() {
           <h1 className="text-xl font-bold text-white tracking-tight">Edit Career Entry</h1>
           <p className="text-sm text-slate-500 mt-0.5">Search, modify, and save changes to an existing entry</p>
         </div>
-        <span className="text-[10px] font-mono text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded px-2 py-1">
+        <span className="text-[10px] font-mono text-violet-100 bg-violet-500/10 border border-violet-500/20 rounded px-2 py-1">
           EDIT
         </span>
       </div>
@@ -295,12 +295,12 @@ export default function EditCareerData() {
         {isFormActive && (
           <div className="mt-3 flex items-center gap-2">
             <span className="text-[11px] text-slate-500">Currently editing:</span>
-            <span className="font-mono text-[11px] text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded px-1.5 py-0.5">
+            <span className="font-mono text-[11px] text-violet-100 bg-violet-500/10 border border-violet-500/20 rounded px-2.5 py-0.5">
               {original.SL}
             </span>
             <span className="text-[11px] text-slate-300">{original.Institute}</span>
             <span className="text-[11px] text-slate-500">·</span>
-            <span className="text-[11px] text-slate-400">{original.Position}</span>
+            <span className="text-[11px] text-slate-200">{original.Position}</span>
             {isDirty && (
               <span className="ml-auto text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-full px-2.5 py-0.5 flex items-center gap-1">
                 <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 8 8">
@@ -323,8 +323,8 @@ export default function EditCareerData() {
         )}
 
         {/* Section: Identity */}
-        <div className="px-5 py-5 border-b border-slate-800">
-          <p className="text-[11px] font-semibold tracking-widest uppercase text-violet-400 mb-4">
+        <div className="px-2 py-5 border-b border-slate-800">
+          <p className="text-[11px] font-semibold tracking-widest uppercase text-violet-100 mb-4">
             01 · Identity
             {changedFields.some((f) => ["SL", "Institute", "Position"].includes(f)) && (
               <DiffIndicator original="x" current="" />
@@ -332,7 +332,7 @@ export default function EditCareerData() {
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-400 flex items-center gap-1">
+              <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-200 flex items-center gap-1">
                 SL No. <span className="text-rose-400">*</span>
                 <DiffIndicator original={original.SL} current={form.SL} />
               </label>
@@ -348,7 +348,7 @@ export default function EditCareerData() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-400 flex items-center gap-1">
+              <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-200 flex items-center gap-1">
                 Institute <span className="text-rose-400">*</span>
                 <DiffIndicator original={original.Institute} current={form.Institute} />
               </label>
@@ -365,7 +365,7 @@ export default function EditCareerData() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-400 flex items-center gap-1">
+              <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-200 flex items-center gap-1">
                 Position <span className="text-rose-400">*</span>
                 <DiffIndicator original={original.Position} current={form.Position} />
               </label>
@@ -384,8 +384,8 @@ export default function EditCareerData() {
         </div>
 
         {/* Section: Credentials */}
-        <div className="px-5 py-5 border-b border-slate-800">
-          <p className="text-[11px] font-semibold tracking-widest uppercase text-violet-400 mb-4">
+        <div className="px-2 py-5 border-b border-slate-800">
+          <p className="text-[11px] font-semibold tracking-widest uppercase text-violet-100 mb-4">
             02 · Credentials
             {changedFields.some((f) => ["UserID", "Password", "Posts", "ApplyDate"].includes(f)) && (
               <DiffIndicator original="x" current="" />
@@ -400,7 +400,7 @@ export default function EditCareerData() {
               ] as { key: keyof CareerEntry; label: string; placeholder: string; mono: boolean }[]
             ).map(({ key, label, placeholder, mono }) => (
               <div key={key} className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-400 flex items-center gap-1">
+                <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-200 flex items-center gap-1">
                   {label}
                   <DiffIndicator original={original[key]} current={form[key]} />
                 </label>
@@ -419,7 +419,7 @@ export default function EditCareerData() {
             ))}
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-400 flex items-center gap-1">
+              <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-200 flex items-center gap-1">
                 Apply Date <span className="text-rose-400">*</span>
                 <DiffIndicator original={original.ApplyDate} current={form.ApplyDate} />
               </label>
@@ -437,8 +437,8 @@ export default function EditCareerData() {
         </div>
 
         {/* Section: Exam Status */}
-        <div className="px-5 py-5">
-          <p className="text-[11px] font-semibold tracking-widest uppercase text-violet-400 mb-4">
+        <div className="px-2 py-5">
+          <p className="text-[11px] font-semibold tracking-widest uppercase text-violet-100 mb-4">
             03 · Exam Status
             {changedFields.some((f) => ["ExamStatus", "Preliminary", "Written", "Viva"].includes(f)) && (
               <DiffIndicator original="x" current="" />
@@ -454,7 +454,7 @@ export default function EditCareerData() {
               ] as { key: keyof CareerEntry; label: string; options: string[] }[]
             ).map(({ key, label, options }) => (
               <div key={key} className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-400 flex items-center gap-1">
+                <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-200 flex items-center gap-1">
                   {label}
                   <DiffIndicator original={original[key]} current={form[key]} />
                 </label>
@@ -467,7 +467,7 @@ export default function EditCareerData() {
                       text-sm font-medium bg-slate-900/80 outline-none
                       transition-all duration-200 cursor-pointer
                       focus:ring-2 focus:ring-violet-500/50 focus:border-violet-400
-                      ${form[key] ? statusColors[form[key]] + " border" : "border-slate-700 text-slate-400"}
+                      ${form[key] ? statusColors[form[key]] + " border" : "border-slate-700 text-slate-200"}
                     `}
                   >
                     <option value="">— Select —</option>
@@ -478,7 +478,7 @@ export default function EditCareerData() {
                     ))}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
-                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-3.5 h-3.5 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
@@ -539,7 +539,7 @@ export default function EditCareerData() {
             <button
               onClick={handleDiscard}
               disabled={status === "loading" || !isDirty}
-              className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-400 border border-slate-700
+              className="px-5 py-2 rounded-lg text-sm font-semibold text-slate-200 border border-slate-700
                 hover:bg-slate-800 hover:text-slate-200 transition-all duration-150
                 disabled:opacity-40 disabled:cursor-not-allowed"
             >

@@ -211,7 +211,7 @@ const RowDetail = ({ record, onClose }: { record: Career; onClose: () => void })
   const variant = getRowVariant(record);
   const meta = VARIANT_META[variant];
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm" >
       <div
         className="bg-gray-900 border border-gray-700 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg p-6 space-y-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -413,16 +413,16 @@ if (search.trim()) {
               <button
                 key={t}
                 onClick={() => { setTab(t); setFilterVariant("all"); }}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 flex items-center gap-2
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 flex items-center gap-2
                   ${tab === t
                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-900/40"
                     : "text-gray-400 hover:text-gray-200"
                   }`}
               >
                 {t === "upcoming" ? (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" strokeLinecap="round" /></svg>
+                  <svg className="w-3.5 hidden md:block h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" strokeLinecap="round" /></svg>
                 ) : (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M9 11l3 3L22 4" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" strokeLinecap="round" /></svg>
+                  <svg className="w-3.5 hidden md:block h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M9 11l3 3L22 4" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" strokeLinecap="round" /></svg>
                 )}
                 {t === "upcoming" ? "Upcoming" : "Completed"}
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${tab === t ? "bg-white/20" : "bg-gray-800"}`}>

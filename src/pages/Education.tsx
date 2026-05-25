@@ -139,7 +139,7 @@ const Education = () => {
   const { copied: instCopied, copy: copyInst } = useCopy(data?.InstituteName ?? "");
 
   return (
-    <section className="min-h-screen bg-black px-4 py-14 font-mono">
+    <section className="min-h-screen bg-black px-2 lg:px-4 py-14 font-mono">
       {/* Header */}
       <div className="mb-8">
         <p className="text-[10px] tracking-[0.4em] uppercase mb-1" style={{ color: meta?.color }}>

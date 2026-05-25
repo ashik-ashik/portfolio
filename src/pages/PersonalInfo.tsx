@@ -26,7 +26,7 @@ const PersonalInfo = () => {
   };
 
   return (
-    <section className="min-h-screen bg-black px-6 py-16 font-mono">
+    <section className="min-h-screen bg-black px-2 lg:px-6 py-16 font-mono">
       {/* Header */}
       <div className="mb-12 relative">
         <p className="text-[11px] tracking-[0.35em] text-zinc-500 uppercase mb-2">

@@ -366,10 +366,10 @@ const DashboardContent = ({ careerData }: DashboardContentProps) => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-950 p-6 space-y-6">
+    <div className="flex-1 overflow-y-auto bg-gray-950 p-1 lx:p-6 space-y-6">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex-col lg:flex-row gap-2 items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Career Dashboard</h1>
           <p className="text-gray-400 text-sm mt-0.5">Application & Exam Analytics</p>
@@ -381,7 +381,7 @@ const DashboardContent = ({ careerData }: DashboardContentProps) => {
       </div>
 
       {/* Top stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg-gap-4">
         <StatCard
           label="Total Applied" value={total} sub="All applications" accent="bg-indigo-500"
           icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" strokeLinecap="round" /><rect x="9" y="3" width="6" height="4" rx="1" /></svg>}

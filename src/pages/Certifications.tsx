@@ -66,8 +66,10 @@ const DataRow = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-const CertificateModal = ({
-  cert,
+
+import { createPortal } from "react-dom";
+
+const CertificateModal = ({cert,
   onClose,
 }: {
   cert: Certificate;
@@ -75,10 +77,9 @@ const CertificateModal = ({
 }) => {
   const driveImageUrl = `https://drive.google.com/file/d/${cert.FileId}/preview`;
 
-  return (
-    <div
-      className="fixed inset-0 z-[999] flex items-center justify-center p-4"
-      onClick={onClose}
+  const modalContent = (  
+      <div
+      className="fixed inset-0 z-[99999] w-full h-[100vh] bg-black/90 backdrop-blur-md flex justify-center items-center"
     >
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
 
@@ -138,7 +139,14 @@ const CertificateModal = ({
       </div>
     </div>
   );
+
+  return createPortal(
+    modalContent,
+    document.getElementById("modal-root")!
+  );
 };
+
+
 
 const CertificateCard = ({
   cert,
@@ -298,7 +306,7 @@ const Certifications = () => {
   }, [certs, search]);
 
   return (
-    <section className="min-h-screen bg-slate-950 px-4 py-12 font-sans">
+    <section className="min-h-screen bg-slate-950 px-1 lg:px-4 py-12 font-sans">
       {/* Header */}
       <div className="max-w-4xl mx-auto mb-10 space-y-2">
         <div className="flex items-center gap-2 mb-1">

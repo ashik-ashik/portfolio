@@ -194,7 +194,7 @@ export default function AddCareerData() {
 //   console.log(  )
 
   return (
-    <div className="max-w-5xl m-auto py-10">
+    <div className="max-w-5xl m-auto py-10 px-2">
       <div className="">
 
         {/* Header */}
@@ -213,7 +213,7 @@ export default function AddCareerData() {
 
           {/* Section: Identity */}
           <h6 className="text-gray-200 text-xs p-4">Last SL: {careerData?.[careerData.length - 1]?.SL || "Unknown"}</h6>
-          <div className="px-5 py-5 border-b border-slate-800">
+          <div className="px-1 py-5 border-b border-slate-800">
             <p className="text-[11px] font-semibold tracking-widest uppercase text-indigo-400 mb-4">
               01 · Identity
             </p>
@@ -225,7 +225,7 @@ export default function AddCareerData() {
           </div>
 
           {/* Section: Credentials */}
-          <div className="px-5 py-5 border-b border-slate-800">
+          <div className="px-1 py-5 border-b border-slate-800">
             <p className="text-[11px] font-semibold tracking-widest uppercase text-indigo-400 mb-4">
               02 · Credentials
             </p>
@@ -238,7 +238,7 @@ export default function AddCareerData() {
           </div>
 
           {/* Section: Exam Status */}
-          <div className="px-5 py-5">
+          <div className="px-1 py-5">
             <p className="text-[11px] font-semibold tracking-widest uppercase text-indigo-400 mb-4">
               03 · Exam Status
             </p>
