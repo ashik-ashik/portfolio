@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import type { JobCircular } from "../services/careerDataTypes";
 import { useCareerData } from "../hooks/useCareerData";
 import useAuth from "../hooks/useAuth";
+import MatrixLoader from "../components/MatrixLoader";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,7 +16,7 @@ import useAuth from "../hooks/useAuth";
 
 function getDaysRemaining(applyEnds: string): number {
   const end = new Date(applyEnds);
-  const today = new Date("2026-05-24");
+  const today = new Date();
   return Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
@@ -42,9 +43,9 @@ function getDeadlineStatus(days: number): {
 }
 
 function getGradeLabel(grade: number): string {
-  if (grade <= 3) return "Class I";
-  if (grade <= 6) return "Class II";
-  if (grade <= 10) return "Class III";
+  if (grade <= 9) return "Class I";
+  if (grade <= 12) return "Class II";
+  if (grade <= 16) return "Class III";
   return "Class IV";
 }
 
@@ -211,7 +212,7 @@ function StatCard({ icon, label, value, sub, accent }: StatCardProps) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function AvailableJobListsToApply() {
-  const { availableJobData } = useCareerData();
+  const { availableJobData, loading } = useCareerData();
   const {currentUserInfo} = useAuth();
 
   const GOOGLE_FORM_URL = 'https://forms.gle/8dDUXndbLcSTE1Bd9';
@@ -329,7 +330,9 @@ export default function AvailableJobListsToApply() {
   }
 
   // ── Render ──────────────────────────────────────────────────────────────────
-
+  if(loading){
+    return <MatrixLoader />
+  }
   return (
     <div
       className="min-h-screen text-slate-100"
@@ -644,7 +647,7 @@ export default function AvailableJobListsToApply() {
                             {job.PostName}
                           </span>
                           <span
-                            className="text-slate-600 text-xs mt-0.5 block"
+                            className="text-slate-400 text-xs mt-0.5 block"
                             style={{ fontFamily: "'DM Mono', monospace" }}
                           >
                             Added{" "}
@@ -772,15 +775,8 @@ export default function AvailableJobListsToApply() {
 
         {/* Footer note */}
         <p className="mt-6 text-center text-xs text-slate-700">
-          Data sourced from{" "}
-          <code
-            className="text-slate-600"
-            style={{ fontFamily: "'DM Mono', monospace" }}
-          >
-            useCareerData()
-          </code>{" "}
-          hook · Deadlines calculated relative to today
-        </p>
+          ASH initiative
+         </p>
       </div>
     </div>
   );

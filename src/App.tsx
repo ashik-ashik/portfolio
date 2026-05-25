@@ -8,6 +8,7 @@ import ASHroute from "./components/ASHroute";
 import NotFound404 from "./pages/NotFound";
 import PersonalDashboard from "./pages/PersonalDashboard";
 import useAuth from "./hooks/useAuth";
+import AvailableJobListsToApply from "./pages/AvailableJobListsToApply";
 
 
 
@@ -24,6 +25,7 @@ const {user} = useAuth();
           <Route path={`${user && !user.email ? '/login' : '/account'}`} element={<LoginPage />}/>
           <Route path="/career" element={<ASHroute><CareerDashboard /></ASHroute>}/>
           <Route path="/personal" element={<ASHroute><PersonalDashboard /></ASHroute>}/>
+          <Route path="/apply-korte-hobe" element={<AvailableJobListsToApply />}/>
           <Route path="/*" element={<NotFound404 />}/>
         </Routes>
       </BrowserRouter>

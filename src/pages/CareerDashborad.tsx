@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { HomeIcon, PersonStandingIcon } from "lucide-react";
+import { BriefcaseBusiness, HomeIcon, PersonStandingIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCareerData } from "../hooks/useCareerData";
 import MatrixLoader from "../components/MatrixLoader";
@@ -121,11 +121,7 @@ const IconChevronLeft = () => (
     <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
-const IconMenu = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-    <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
-  </svg>
-);
+
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 
@@ -216,10 +212,10 @@ const DonutChart = ({ qualified, unqualified, pending, notAttained, size = 120 }
 
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: <IconDashboard />, path: "/career" },
+  { id: "records",   label: "Records",   icon: <IconList />,      path: "/career/records" },
+  { id: "ongoingjobs",   label: "Ongoing Circular",   icon: <BriefcaseBusiness />,      path: "/career/ongoingjobs" },
   { id: "add",       label: "Add Info",  icon: <IconAdd />,       path: "/career/add" },
   { id: "edit",      label: "Edit Info", icon: <IconEdit />,      path: "/career/edit" },
-  { id: "records",   label: "Records",   icon: <IconList />,      path: "/career/records" },
-  { id: "ongoingjobs",   label: "Ongoing Circular",   icon: <IconList />,      path: "/career/ongoingjobs" },
   { id: "settings",  label: "Settings",  icon: <IconSettings />,  path: "/career/settings" },
 ];
 
@@ -247,12 +243,7 @@ const Sidebar = ({ expanded, setExpanded, active, setActive }: SidebarProps) => 
         </button>
       </div>
 
-      {/* Hamburger hint when collapsed */}
-      {!expanded && (
-        <div className="flex justify-center pt-2 pb-1">
-          <span className="text-gray-500"><IconMenu /></span>
-        </div>
-      )}
+      
 
       {/* Nav items */}
       <nav className="flex flex-col gap-1 p-2 flex-1 mt-1">
