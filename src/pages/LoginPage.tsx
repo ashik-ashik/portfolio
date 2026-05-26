@@ -77,7 +77,7 @@ const LoggedInView: React.FC<{ user: any; onLogout: () => void }> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#030712] text-white overflow-hidden relative flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen  text-white overflow-hidden relative flex flex-col items-center justify-center px-4 py-12">
       {/* BG blobs */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-48 -left-40 w-[500px] h-[500px] bg-cyan-500/15 blur-3xl rounded-full animate-pulse" />
@@ -248,7 +248,7 @@ const LoginPage: React.FC = () => {
 
   /* ── LOGGED OUT ── */
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#030712] text-white flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen relative overflow-hidden  text-white flex items-center justify-center px-4 py-10">
       {/* BG */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -left-32 w-[420px] h-[420px] bg-cyan-500/20 blur-3xl rounded-full" />

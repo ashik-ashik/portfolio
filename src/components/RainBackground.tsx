@@ -73,138 +73,6 @@ function createBolt(W: number, H: number): LightningBolt {
   return { segments, branches, alpha: 1, phase: 0, flashFrames: 10 + Math.floor(Math.random() * 8) };
 }
 
-// ─── Thunder — 4-layer sharp crack + deep rolling rumble ─────────────────────
-//
-//  Layer 1 — Ultra-sharp electric ZAP transient   (0–60 ms,  highpass 3.5kHz)
-//  Layer 2 — Woody mid-frequency CRACK            (0–550 ms, bandpass 900Hz Q12)
-//  Layer 3 — Deep rolling RUMBLE                  (0–4.5 s,  lowpass sweep 320→22Hz)
-//  Layer 4 — Distant echo rumble                  (delayed,  lowpass 160→18Hz)
-//
-function synthesiseThunder(ac: AudioContext): void {
-  const now = ac.currentTime;
-  const duration = 4.5;
-  const frameCount = Math.ceil(ac.sampleRate * duration);
-
-  // Shared white-noise buffer — each layer gets its own BufferSource
-  const buf = ac.createBuffer(1, frameCount, ac.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < frameCount; i++) data[i] = Math.random() * 2 - 1;
-
-  const makeSource = () => {
-    const s = ac.createBufferSource();
-    s.buffer = buf;
-    return s;
-  };
-
-  const master = ac.createGain();
-  master.gain.value = 1.0;
-  master.connect(ac.destination);
-
-  // ── Layer 1: electric ZAP (4 ms attack, gone by 60 ms) ───────────────────
-  {
-    const src = makeSource();
-    const hp = ac.createBiquadFilter();
-    hp.type = "highpass";
-    hp.frequency.value = 3500;
-    hp.Q.value = 0.5;
-
-    const bp = ac.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.value = 1200;
-    bp.Q.value = 6;
-
-    const g = ac.createGain();
-    g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(2.8, now + 0.004);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-
-    src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(master);
-    src.start(now); src.stop(now + 0.12);
-  }
-
-  // ── Layer 2: sharp woody CRACK (8 ms attack, dies ~550 ms) ───────────────
-  {
-    const src = makeSource();
-    const hp = ac.createBiquadFilter();
-    hp.type = "highpass";
-    hp.frequency.value = 1800;
-    hp.Q.value = 0.7;
-
-    const bp = ac.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.value = 900;
-    bp.Q.value = 12; // narrow Q = crisp crack character
-
-    const g = ac.createGain();
-    g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(1.8, now + 0.008);
-    g.gain.exponentialRampToValueAtTime(0.3,  now + 0.08);
-    g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
-
-    src.connect(hp); hp.connect(bp); bp.connect(g); g.connect(master);
-    src.start(now); src.stop(now + 0.6);
-  }
-
-  // ── Layer 3: deep rolling RUMBLE (full duration) ──────────────────────────
-  {
-    const src = makeSource();
-    const lp = ac.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(320, now);
-    lp.frequency.exponentialRampToValueAtTime(22, now + duration);
-    lp.Q.value = 1.2;
-
-    const lp2 = ac.createBiquadFilter();
-    lp2.type = "lowpass";
-    lp2.frequency.value = 180;
-
-    const g = ac.createGain();
-    g.gain.setValueAtTime(0, now);
-    g.gain.linearRampToValueAtTime(0.9, now + 0.02);
-    g.gain.setValueAtTime(0.9, now + 0.1);
-    g.gain.exponentialRampToValueAtTime(0.4,  now + 0.8);
-    g.gain.exponentialRampToValueAtTime(0.12, now + 2.2);
-    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-    src.connect(lp); lp.connect(lp2); lp2.connect(g); g.connect(master);
-    src.start(now); src.stop(now + duration);
-  }
-
-  // ── Layer 4: distant echo rumble (random delay 280–830 ms) ───────────────
-  {
-    const echoDelay = 0.28 + Math.random() * 0.55;
-    const src = makeSource();
-    const lp = ac.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.setValueAtTime(160, now + echoDelay);
-    lp.frequency.exponentialRampToValueAtTime(18, now + duration);
-
-    const g = ac.createGain();
-    g.gain.setValueAtTime(0, now + echoDelay);
-    g.gain.linearRampToValueAtTime(0.45, now + echoDelay + 0.04);
-    g.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-    src.connect(lp); lp.connect(g); g.connect(master);
-    src.start(now + echoDelay); src.stop(now + duration);
-  }
-}
-
-// ─── Ensure AudioContext is live, then fire ───────────────────────────────────
-function fireThunder(acRef: React.MutableRefObject<AudioContext | null>): void {
-  if (!acRef.current || acRef.current.state === "closed") {
-    acRef.current = new (
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    )();
-  }
-  const ac = acRef.current;
-  if (ac.state === "suspended") {
-    ac.resume().then(() => synthesiseThunder(ac));
-  } else {
-    synthesiseThunder(ac);
-  }
-}
-
 // ─── Component ─────────────────────────────────────────────────────────────────
 
 const RainCanvas: React.FC = () => {
@@ -215,23 +83,21 @@ const RainCanvas: React.FC = () => {
   const ripplesRef    = useRef<Ripple[]>([]);
   const boltsRef      = useRef<LightningBolt[]>([]);
   const flashAlphaRef = useRef<number>(0);
-  const audioCtxRef   = useRef<AudioContext | null>(null);
 
   const spawnRipple = useCallback((x: number, surfaceY: number) => {
     ripplesRef.current.push({
       x, y: surfaceY,
       r: 1,
-      maxR: 18 + Math.random() * 16,
-      opacity: 0.75,
+      maxR: 10 + Math.random() * 8,
+      opacity: 0.65,
       rings: 1 + Math.floor(Math.random() * 2),
     });
   }, []);
 
-  // Every strike fires fireThunder — no skipping, no random chance
+  // Lightning only — no thunder sound
   const triggerStrike = useCallback((W: number, H: number) => {
     boltsRef.current.push(createBolt(W, H));
     flashAlphaRef.current = 1;
-    fireThunder(audioCtxRef);
   }, []);
 
   useEffect(() => {
@@ -249,14 +115,17 @@ const RainCanvas: React.FC = () => {
     };
 
     const initDrops = () => {
-      const count = Math.floor(rain.width / 6);
+      const count = Math.floor(rain.width / 3);
       dropsRef.current = Array.from({ length: count }, () => ({
         x:       Math.random() * rain.width,
         y:       Math.random() * rain.height - rain.height,
-        length:  Math.random() * 20 + 10,
-        speed:   Math.random() * 4 + 2,
-        opacity: Math.random() * 0.45 + 0.08,
-        width:   Math.random() < 0.7 ? 1 : 1.5,
+        // Smaller: vertical radius 3–8px (was 6–18px)
+        length:  Math.random() * 5 + 3,
+        // Faster: 8–16px/frame (was 2–6px/frame)
+        speed:   Math.random() * 8 + 8,
+        opacity: Math.random() * 0.55 + 0.15,
+        // Narrower to match smaller size
+        width:   Math.random() * 0.8 + 0.5,
       }));
     };
 
@@ -283,21 +152,43 @@ const RainCanvas: React.FC = () => {
       rctx.lineWidth = 1;
       rctx.stroke();
 
-      // Drops
+      // Drops — oval/teardrop shape using ellipse
       dropsRef.current.forEach(d => {
+        const rx = d.width;       // horizontal radius (narrow)
+        const ry = d.length;      // vertical radius (elongated)
+
+        rctx.save();
+        rctx.shadowColor = "rgba(0,245,255,0.25)";
+        rctx.shadowBlur = 3;
+
+        // Filled oval body
         rctx.beginPath();
-        rctx.moveTo(d.x, d.y);
-        rctx.lineTo(d.x - d.length * 0.1, d.y + d.length);
-        rctx.strokeStyle = `rgba(0,245,255,${d.opacity})`;
-        rctx.lineWidth = d.width;
-        rctx.shadowColor = "rgba(0,245,255,0.2)";
-        rctx.shadowBlur = 2;
-        rctx.stroke();
-        rctx.shadowBlur = 0;
+        // Slight tilt to simulate falling angle
+        rctx.translate(d.x, d.y);
+        rctx.rotate(-0.08); // subtle lean
+        rctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+
+        // Gradient fill: brighter top, fade to transparent bottom — like a real raindrop
+        const grad = rctx.createLinearGradient(0, -ry, 0, ry);
+        grad.addColorStop(0,   `rgba(180,240,255,${d.opacity * 0.9})`);
+        grad.addColorStop(0.4, `rgba(0,220,255,${d.opacity})`);
+        grad.addColorStop(1,   `rgba(0,100,200,${d.opacity * 0.3})`);
+        rctx.fillStyle = grad;
+        rctx.fill();
+
+        // Thin highlight glint on the left edge
+        rctx.beginPath();
+        rctx.ellipse(-rx * 0.25, -ry * 0.3, rx * 0.2, ry * 0.25, 0, 0, Math.PI * 2);
+        rctx.fillStyle = `rgba(255,255,255,${d.opacity * 0.55})`;
+        rctx.fill();
+
+        rctx.restore();
+
         d.y += d.speed;
+        // Trigger ripple when the bottom tip of the drop (center + ry) reaches the surface
         if (d.y + d.length >= SURFACE_Y) {
           spawnRipple(d.x, SURFACE_Y);
-          d.y = -d.length - Math.random() * 60;
+          d.y = -d.length - Math.random() * 80;
           d.x = Math.random() * W;
         }
       });
@@ -390,20 +281,36 @@ const RainCanvas: React.FC = () => {
     draw();
 
     let timeoutId: ReturnType<typeof setTimeout>;
+
     const schedule = () => {
-      const delay = 5000 + Math.random() * 9000;
+      // 18–35 second intervals between strikes
+      const delay = 18000 + Math.random() * 17000;
       timeoutId = setTimeout(() => {
-        triggerStrike(rain.width, rain.height);
+        // Only fire if the tab is visible — otherwise just reschedule silently.
+        // This prevents bolts from stacking up while the tab is in the background.
+        if (!document.hidden) {
+          triggerStrike(rain.width, rain.height);
+        }
         schedule();
       }, delay);
     };
     schedule();
 
+    // When the user returns to the tab, flush any stale bolts that accumulated
+    // (shouldn't happen now, but belt-and-suspenders) and clear the flash.
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        boltsRef.current = [];
+        flashAlphaRef.current = 0;
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       cancelAnimationFrame(animRef.current);
       window.removeEventListener("resize", resize);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       clearTimeout(timeoutId);
-      audioCtxRef.current?.close();
     };
   }, [spawnRipple, triggerStrike]);
 

@@ -9,6 +9,7 @@ import NotFound404 from "./pages/NotFound";
 import PersonalDashboard from "./pages/PersonalDashboard";
 import useAuth from "./hooks/useAuth";
 import AvailableJobListsToApply from "./pages/AvailableJobListsToApply";
+import RainCanvas from "./components/RainBackground";
 
 
 
@@ -18,6 +19,7 @@ const {user} = useAuth();
   return (
     <div>
       {/* <CustomCursor /> */}
+      <RainCanvas />
       <Toaster />
       <BrowserRouter>
         <Routes>
