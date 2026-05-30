@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useState } from "react";
-import type { CareerRow, AcademicRow, PersonalRow, CertificatesRow, JobCircular } from "../services/careerDataTypes";
+import React, { useEffect, useState, useCallback } from "react";
+import type {
+  CareerRow,
+  AcademicRow,
+  PersonalRow,
+  CertificatesRow,
+  JobCircular,
+} from "../services/careerDataTypes";
 import { CareerDataContext } from "../contexts/CareerDataContext";
 import useAuth from "../hooks/useAuth";
 
@@ -8,10 +14,8 @@ interface Props {
   children: React.ReactNode;
 }
 
-
 const Read_Career_Info = import.meta.env.VITE_CAREER_SHEET_READ_WRITE_API_URL;
 const Read_Personal_Info = import.meta.env.VITE_READ_PERSONAL_INFO_URL;
-
 
 export const CareerDataProvider: React.FC<Props> = ({ children }) => {
   const [careerData, setCareerData] = useState<CareerRow[]>([]);
@@ -21,115 +25,95 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
   const [Certificates, setCertificates] = useState<CertificatesRow[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const {currentUserInfo} = useAuth();
 
-  // console.log()
+  const { currentUserInfo, getToken, logout } = useAuth();
+  // ─── getToken comes from useAuth — single source of truth ───────────────────
 
-  
+  // ─────────────────────────────────────────────────────────────────────────
+  // Centralized authenticated fetcher
+  // Apps Script only reads e.parameter (not headers), so the JWT is passed
+  // as a query-param: ?getToken=<jwt>
+  // ─────────────────────────────────────────────────────────────────────────
+  const authFetch = useCallback(
+    async (url: string): Promise<Response> => {
+      if (!getToken) throw new Error("Unauthorized: No getToken available");
+
+      // Append getToken as query param (required for Apps Script)
+      const separator = url.includes("?") ? "&" : "?";
+      const secureUrl = `${url}${separator}getToken=${getToken}`;
+
+      const res = await fetch(secureUrl);
+
+      if (res.status === 401) {
+        logout(); // clear session in useAuth
+        throw new Error("Session expired. Please log in again.");
+      }
+
+      if (!res.ok) {
+        throw new Error(`Request failed: ${res.status} ${res.statusText}`);
+      }
+
+      return res;
+    },
+    [getToken, logout]
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Main data fetch — runs whenever auth state changes
+  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-      const fetchCareerData = async () => {
-        try {
+    // Don't fetch until we actually have a getToken
+    if (!getToken || !currentUserInfo) return;
 
-          
-          setLoading(true);
-          setError(null);
-    // ############################################################################
-          // Read Career Info
-    // ############################################################################
-          const CareerDataRES = await fetch(
-            `${Read_Career_Info}?action=career&user${currentUserInfo?.Role}`
-          );
-    
-          if (!CareerDataRES.ok) {
-            throw new Error("Failed to load career data");
-          }
-    
-          const CareerData = await CareerDataRES.json();
-          // Optional: ensure array safety
-          setCareerData(CareerData.data);
+    const fetchCareerData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    // ############################################################################
-          // Read Personal info Personal
-    // ############################################################################
-          const PersonalDataRES = await fetch(
-            `${Read_Personal_Info}?action=personal`
-          );
-    
-          if (!PersonalDataRES.ok) {
-            throw new Error("Failed to load career data");
-          }
-    
-          const PersonalData = await PersonalDataRES.json();
-          // Optional: ensure array safety
-          
-          setPersonal(PersonalData.data);
+        // ── Career Info ────────────────────────────────────────────────────
+        const CareerDataRES = await authFetch(
+          `${Read_Career_Info}?action=career&user=${currentUserInfo.Role}&&${import.meta.env.VITE_ASH_TOKEN}`
+        );
+        const CareerData = await CareerDataRES.json();
+        setCareerData(CareerData.data);
 
-    // ############################################################################
-          // Read Personal info ACADEMIC
-    // ############################################################################
-          const AcademicDataRES = await fetch(
-            `${Read_Personal_Info}?action=academic`
-          );
-    
-          if (!AcademicDataRES.ok) {
-            throw new Error("Failed to load career data");
-          }
-    
-          const AcademicData = await AcademicDataRES.json();
-          // Optional: ensure array safety
-          setAcademic(AcademicData.data);
+        // ── Personal Info ──────────────────────────────────────────────────
+        const PersonalDataRES = await authFetch(
+          `${Read_Personal_Info}?action=personal&&${import.meta.env.VITE_ASH_TOKEN}`
+        );
+        const PersonalData = await PersonalDataRES.json();
+        setPersonal(PersonalData.data);
 
-    // ############################################################################
-          // Read Personal info Certificates
-    // ############################################################################
-          const CertificatesDataRES = await fetch(
-            `${Read_Personal_Info}?action=certificates`
-          );
-    
-          if (!CertificatesDataRES.ok) {
-            throw new Error("Failed to load career data");
-          }
-    
-          const CertificatesData = await CertificatesDataRES.json();
-          // Optional: ensure array safety
-          setCertificates(CertificatesData.data);
-    
-    
-    
-          // ############################################################################
-          // Ongoing job circular
-    // ############################################################################
-          const availableJobDataDataRES = await fetch(
-            `${Read_Career_Info}?action=getAvailableJobs`
-          );
-    
-          if (!availableJobDataDataRES.ok) {
-            throw new Error("Failed to load career data");
-          }
-    
-          const availableJobDataData = await availableJobDataDataRES.json();
-          // Optional: ensure array safety
-          setAvailableJobData(availableJobDataData.data);
+        // ── Academic Info ──────────────────────────────────────────────────
+        const AcademicDataRES = await authFetch(
+          `${Read_Personal_Info}?action=academic&&${import.meta.env.VITE_ASH_TOKEN}`
+        );
+        const AcademicData = await AcademicDataRES.json();
+        setAcademic(AcademicData.data);
 
+        // ── Certificates ───────────────────────────────────────────────────
+        const CertificatesDataRES = await authFetch(
+          `${Read_Personal_Info}?action=certificates&&${import.meta.env.VITE_ASH_TOKEN}`
+        );
+        const CertificatesData = await CertificatesDataRES.json();
+        setCertificates(CertificatesData.data);
 
+        // ── Available Jobs ─────────────────────────────────────────────────
+        const availableJobDataRES = await authFetch(
+          `${Read_Career_Info}?action=getAvailableJobs&&${import.meta.env.VITE_ASH_TOKEN}`
+        );
+        const availableJobDataData = await availableJobDataRES.json();
+        setAvailableJobData(availableJobDataData.data);
 
-
-
-        } catch (err: any) {
-          setError(err.message || "Unknown error");
-        } finally {
-          setLoading(false);
-        }
-      };
-
-
-
-
-
+      } catch (err: any) {
+        setError(err.message || "Unknown error");
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchCareerData();
-  }, [currentUserInfo]);
-
+  }, [currentUserInfo, getToken, authFetch]);
 
   return (
     <CareerDataContext.Provider
