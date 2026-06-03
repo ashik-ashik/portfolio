@@ -675,35 +675,42 @@ export default function AvailableJobListsToApply() {
                         </td>
 
                         <td className="px-4 sm:px-5 py-4 min-w-[220px]">
-                          <div className="flex items-start gap-2.5">
-                            <span className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-400 font-bold text-xs">
-                              {job.InstitutionName.split(
-                                " "
-                              )
-                                .slice(0, 2)
-                                .map((w) => w[0])
-                                .join("")}
-                            </span>
-
-                            <span className="text-slate-200 font-semibold leading-snug text-xs sm:text-sm break-words">
-                              {
-                                job.InstitutionName
-                              }
-                            </span>
+                          
+                            <div className="flex items-start gap-2.5">
+                              <span className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-400 font-bold text-xs">
+                                {job.InstitutionName.split(
+                                  " "
+                                )
+                                  .slice(0, 2)
+                                  .map((w) => w[0])
+                                  .join("")}
+                              </span>
+                            <div className="">
+                              <span className="text-slate-200 font-semibold leading-snug text-xs sm:text-sm break-words text-nowrap">
+                                {
+                                  job.InstitutionName 
+                                }
+                              </span>
+                                <p> 
+                                  <a href={job?.ApplyLink} className="text-white text-xs hover:underline hover:text-rose-600" target="_blank" rel="noopener noreferrer">
+                                    Apply Now
+                                  </a>
+                                </p> 
+                            </div>
                           </div>
                         </td>
 
                         <td className="px-4 sm:px-5 py-4 min-w-[240px]">
-                          <span className="text-slate-300 font-medium block text-xs sm:text-sm leading-snug">
+                          <span className="text-slate-300 font-medium block text-xs sm:text-sm leading-snug text-nowrap">
                             {job.PostName}
                           </span>
                         </td>
 
-                        <td className="px-4 sm:px-5 py-4 whitespace-nowrap">
+                        <td className="px-4 sm:px-5 py-4 whitespace-nowrap text-nowrap">
                           {job.NumberOfPosts}
                         </td>
 
-                        <td className="px-4 sm:px-5 py-4">
+                        <td className="px-4 sm:px-5 py-4 text-nowrap">
                           <span
                             className={`inline-flex flex-col items-center px-2.5 py-1 rounded-lg border text-xs font-bold ${gradeStyle}`}
                           >
@@ -722,7 +729,7 @@ export default function AvailableJobListsToApply() {
                           </span>
                         </td>
 
-                        <td className="px-4 sm:px-5 py-4 whitespace-nowrap text-xs">
+                        <td className="px-4 sm:px-5 py-4 whitespace-nowrap text-xs text-nowrap">
                           {new Date(
                             job.ApplyStart
                           ).toLocaleDateString()}
@@ -730,7 +737,7 @@ export default function AvailableJobListsToApply() {
 
                         <td className="px-4 sm:px-5 py-4">
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${deadline.color} ${deadline.bg}`}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${deadline.color} ${deadline.bg} text-nowrap`}
                           >
                             {deadline.label}
                           </span>
@@ -744,7 +751,7 @@ export default function AvailableJobListsToApply() {
                                 title: `${job.InstitutionName} — ${job.PostName}`,
                               })
                             }
-                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-indigo-300 border border-indigo-700/40 bg-indigo-950/30 hover:bg-indigo-900/50"
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-indigo-300 border border-indigo-700/40 bg-indigo-950/30 hover:bg-indigo-900/50 text-nowrap"
                           >
                             View PDF
                           </button>

@@ -52,4 +52,5 @@ export interface JobCircular {
   ApplyEnds: string;
   CircularFile: string;
   PositionGrade: number;
+  ApplyLink: string;
 }
