@@ -235,9 +235,25 @@ function StatCard({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-
+type Career = {
+  SL?: string;
+  Institute?: string;
+  Position?: string;
+  UserID?: string;
+  Password?: string;
+  Posts?: string;
+  ApplyDate?: string;
+  /** "Done" | "Future" */
+  ExamStatus?: string;
+  /** "Qualified" | "Unqualified" | "Not Attaint" | "↔" | "" */
+  Preliminary?: string;
+  /** "↔" | "" */
+  Written?: string;
+  /** "Unqualified" | "" */
+  Viva?: string;
+};
 export default function AvailableJobListsToApply() {
-  const { availableJobData, loading } = useCareerData();
+  const { availableJobData, careerData, loading } = useCareerData();
   const { currentUserInfo } = useAuth();
 
   const GOOGLE_FORM_URL =
@@ -290,7 +306,15 @@ export default function AvailableJobListsToApply() {
   // ── Filter + Sort ─────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    let data = [...availableJobData];
+    let data = availableJobData.filter((job) => {
+    return !(careerData as Career[]).some(
+      (career) =>
+        career.Institute?.trim().toLowerCase() ===
+          job.InstitutionName?.trim().toLowerCase() &&
+        career.Position?.trim().toLowerCase() ===
+          job.PostName?.trim().toLowerCase()
+    );
+});
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
