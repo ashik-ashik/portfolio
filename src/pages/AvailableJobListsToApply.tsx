@@ -188,19 +188,12 @@ interface StatCardProps {
   accent: string;
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  sub,
-  accent,
-}: StatCardProps) {
+function StatCard({ icon, label, value, sub, accent }: StatCardProps) {
   return (
     <div
       className="relative overflow-hidden rounded-2xl border border-slate-700/40 p-4 sm:p-5"
       style={{
-        background:
-          "linear-gradient(135deg,#0f1c35 0%,#0d1424 100%)",
+        background: "linear-gradient(135deg,#0f1c35 0%,#0d1424 100%)",
       }}
     >
       <div
@@ -224,9 +217,7 @@ function StatCard({
           </p>
 
           {sub && (
-            <p className="text-[11px] sm:text-xs text-slate-500 mt-1">
-              {sub}
-            </p>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-1">{sub}</p>
           )}
         </div>
       </div>
@@ -234,7 +225,8 @@ function StatCard({
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type Career = {
   SL?: string;
   Institute?: string;
@@ -252,69 +244,41 @@ type Career = {
   /** "Unqualified" | "" */
   Viva?: string;
 };
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function AvailableJobListsToApply() {
   const { availableJobData, careerData, loading } = useCareerData();
   const { currentUserInfo } = useAuth();
 
-  const GOOGLE_FORM_URL =
-    "https://forms.gle/8dDUXndbLcSTE1Bd9";
+  const GOOGLE_FORM_URL = "https://forms.gle/8dDUXndbLcSTE1Bd9";
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortField, setSortField] =
-    useState<keyof JobCircular>("ApplyEnds");
-
-  const [sortDir, setSortDir] = useState<"asc" | "desc">(
-    "asc"
-  );
-
+  const [sortField, setSortField] = useState<keyof JobCircular>("ApplyEnds");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [pdfModal, setPdfModal] = useState<{
     url: string;
     title: string;
   } | null>(null);
+  const [gradeFilter, setGradeFilter] = useState<string>("all");
 
-  const [gradeFilter, setGradeFilter] =
-    useState<string>("all");
-
-  // ── Stats ──────────────────────────────────────────────────────────────
-
-  const stats = useMemo(() => {
-    const total = availableJobData.length;
-
-    const totalPosts = availableJobData.reduce(
-      (s, j) => s + j.NumberOfPosts,
-      0
-    );
-
-    const closingSoon = availableJobData.filter((j) => {
-      const d = getDaysRemaining(j.ApplyEnds);
-
-      return d >= 0 && d <= 7;
-    }).length;
-
-    const uniqueOrgs = new Set(
-      availableJobData.map((j) => j.InstitutionName)
-    ).size;
-
-    return {
-      total,
-      totalPosts,
-      closingSoon,
-      uniqueOrgs,
-    };
-  }, [availableJobData]);
-
-  // ── Filter + Sort ─────────────────────────────────────────────────────
+  // ── Filter + Sort ──────────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    let data = availableJobData.filter((job) => {
-    return !(careerData as Career[]).some(
-      (career) =>
-        career.Institute?.trim().toLowerCase() ===
-          job.InstitutionName?.trim().toLowerCase() &&
-        career.Position?.trim().toLowerCase() ===
-          job.PostName?.trim().toLowerCase()
-    );
-});
+    // Only filter out already-applied jobs for logged-in users who have career data.
+    // Guests and non-logged-in users see all available jobs.
+    let data =
+      currentUserInfo && careerData?.length
+        ? availableJobData.filter((job) => {
+            return !(careerData as Career[]).some(
+              (career) =>
+                career.Institute?.trim().toLowerCase() ===
+                  job.InstitutionName?.trim().toLowerCase() &&
+                career.Position?.trim().toLowerCase() ===
+                  job.PostName?.trim().toLowerCase()
+            );
+          })
+        : [...availableJobData];
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -329,19 +293,14 @@ export default function AvailableJobListsToApply() {
     if (gradeFilter !== "all") {
       const grade = parseInt(gradeFilter);
 
-      data = data.filter(
-        (j) => j.PositionGrade === grade
-      );
+      data = data.filter((j) => j.PositionGrade === grade);
     }
 
     data.sort((a, b) => {
       let av: string | number = a[sortField];
       let bv: string | number = b[sortField];
 
-      if (
-        sortField === "ApplyEnds" ||
-        sortField === "ApplyStart"
-      ) {
+      if (sortField === "ApplyEnds" || sortField === "ApplyStart") {
         av = new Date(av as string).getTime();
         bv = new Date(bv as string).getTime();
       }
@@ -359,7 +318,27 @@ export default function AvailableJobListsToApply() {
     sortField,
     sortDir,
     gradeFilter,
+    careerData,
+    currentUserInfo,
   ]);
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+
+  const stats = useMemo(() => {
+    const total = filtered.length;
+
+    const totalPosts = filtered.reduce((s, j) => s + j.NumberOfPosts, 0);
+
+    const closingSoon = filtered.filter((j) => {
+      const d = getDaysRemaining(j.ApplyEnds);
+
+      return d >= 0 && d <= 7;
+    }).length;
+
+    const uniqueOrgs = new Set(filtered.map((j) => j.InstitutionName)).size;
+
+    return { total, totalPosts, closingSoon, uniqueOrgs };
+  }, [filtered]);
 
   function toggleSort(field: keyof JobCircular) {
     if (sortField === field) {
@@ -370,11 +349,7 @@ export default function AvailableJobListsToApply() {
     }
   }
 
-  function SortIcon({
-    field,
-  }: {
-    field: keyof JobCircular;
-  }) {
+  function SortIcon({ field }: { field: keyof JobCircular }) {
     if (sortField !== field)
       return (
         <svg
@@ -460,17 +435,15 @@ export default function AvailableJobListsToApply() {
 
               <span
                 className="text-[10px] sm:text-xs font-bold tracking-[0.2em] uppercase text-emerald-400"
-                style={{
-                  fontFamily: "'DM Mono', monospace",
-                }}
+                style={{ fontFamily: "'DM Mono', monospace" }}
               >
                 Live Circulars
               </span>
             </div>
 
-            {(currentUserInfo?.Role ===
-              import.meta.env
-                .VITE_ASH_ADMIN_SECRET_ROLE) && (
+            {/* ── Admin-only action ── */}
+            {currentUserInfo?.Role ===
+              import.meta.env.VITE_ASH_ADMIN_SECRET_ROLE && (
               <a
                 href={GOOGLE_FORM_URL}
                 target="_blank"
@@ -490,14 +463,13 @@ export default function AvailableJobListsToApply() {
           </h1>
 
           <p className="text-slate-400 text-sm sm:text-base max-w-2xl leading-relaxed">
-            Ongoing government job circulars you're
-            eligible and interested to apply for.
+            Ongoing government job circulars you're eligible and interested to
+            apply for.
           </p>
         </div>
 
         {/* Stats */}
         <div className="grid grid-cols-1 xs:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-
           <StatCard
             accent="bg-indigo-500"
             label="Total Circulars"
@@ -533,39 +505,25 @@ export default function AvailableJobListsToApply() {
 
         {/* Filters */}
         <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
-
           <div className="relative flex-1">
             <input
               type="text"
               placeholder="Search institution or post..."
               value={searchQuery}
-              onChange={(e) =>
-                setSearchQuery(e.target.value)
-              }
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-3 rounded-xl text-sm text-slate-200 placeholder-slate-600 border border-slate-700/50 bg-slate-800/40 focus:outline-none focus:border-indigo-500/60"
             />
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-
             <select
               value={gradeFilter}
-              onChange={(e) =>
-                setGradeFilter(e.target.value)
-              }
+              onChange={(e) => setGradeFilter(e.target.value)}
               className="w-full sm:w-[180px] px-4 py-3 rounded-xl text-sm text-slate-200 border border-slate-700/50 bg-slate-800/40"
             >
-              <option value="all">
-                All Grades
-              </option>
+              <option value="all">All Grades</option>
 
-              {[
-                ...new Set(
-                  availableJobData.map(
-                    (j) => j.PositionGrade
-                  )
-                ),
-              ]
+              {[...new Set(filtered.map((j) => j.PositionGrade))]
                 .sort((a, b) => a - b)
                 .map((g) => (
                   <option key={g} value={g}>
@@ -576,12 +534,9 @@ export default function AvailableJobListsToApply() {
 
             <span
               className="w-full sm:w-auto text-center px-4 py-3 rounded-xl text-sm font-semibold text-slate-400 border border-slate-700/40 bg-slate-800/30"
-              style={{
-                fontFamily: "'DM Mono', monospace",
-              }}
+              style={{ fontFamily: "'DM Mono', monospace" }}
             >
-              {filtered.length} /{" "}
-              {availableJobData.length}
+              {filtered.length} / {filtered.length}
             </span>
           </div>
         </div>
@@ -590,8 +545,7 @@ export default function AvailableJobListsToApply() {
         <div
           className="rounded-2xl border border-slate-700/40 overflow-hidden"
           style={{
-            background:
-              "linear-gradient(180deg,#0f1b30 0%,#0a1220 100%)",
+            background: "linear-gradient(180deg,#0f1b30 0%,#0a1220 100%)",
           }}
         >
           <div className="overflow-x-auto">
@@ -600,61 +554,26 @@ export default function AvailableJobListsToApply() {
                 <tr className="border-b border-slate-700/50">
                   {(
                     [
-                      {
-                        label: "#",
-                        field: null,
-                      },
-                      {
-                        label: "Institution",
-                        field: "InstitutionName",
-                      },
-                      {
-                        label: "Post Name",
-                        field: "PostName",
-                      },
-                      {
-                        label: "Vacancies",
-                        field: "NumberOfPosts",
-                      },
-                      {
-                        label: "Grade",
-                        field: "PositionGrade",
-                      },
-                      {
-                        label: "Apply Window",
-                        field: "ApplyEnds",
-                      },
-                      {
-                        label: "Deadline",
-                        field: "ApplyEnds",
-                      },
-                      {
-                        label: "Circular",
-                        field: null,
-                      },
-                    ] as {
-                      label: string;
-                      field: keyof JobCircular | null;
-                    }[]
+                      { label: "#", field: null },
+                      { label: "Institution", field: "InstitutionName" },
+                      { label: "Post Name", field: "PostName" },
+                      { label: "Vacancies", field: "NumberOfPosts" },
+                      { label: "Grade", field: "PositionGrade" },
+                      { label: "Apply Window", field: "ApplyEnds" },
+                      { label: "Deadline", field: "ApplyEnds" },
+                      { label: "Circular", field: null },
+                    ] as { label: string; field: keyof JobCircular | null }[]
                   ).map(({ label, field }, i) => (
                     <th
                       key={i}
-                      onClick={
-                        field
-                          ? () => toggleSort(field)
-                          : undefined
-                      }
+                      onClick={field ? () => toggleSort(field) : undefined}
                       className={`px-4 sm:px-5 py-4 text-left text-xs font-bold tracking-widest uppercase text-slate-500 whitespace-nowrap ${
-                        field
-                          ? "cursor-pointer hover:text-slate-300"
-                          : ""
+                        field ? "cursor-pointer hover:text-slate-300" : ""
                       }`}
                     >
                       <span className="inline-flex items-center gap-1.5">
                         {label}
-                        {field && (
-                          <SortIcon field={field} />
-                        )}
+                        {field && <SortIcon field={field} />}
                       </span>
                     </th>
                   ))}
@@ -673,18 +592,9 @@ export default function AvailableJobListsToApply() {
                   </tr>
                 ) : (
                   filtered.map((job, idx) => {
-                    const daysLeft =
-                      getDaysRemaining(
-                        job.ApplyEnds
-                      );
-
-                    const deadline =
-                      getDeadlineStatus(daysLeft);
-
-                    const gradeStyle =
-                      getGradeColor(
-                        job.PositionGrade
-                      );
+                    const daysLeft = getDaysRemaining(job.ApplyEnds);
+                    const deadline = getDeadlineStatus(daysLeft);
+                    const gradeStyle = getGradeColor(job.PositionGrade);
 
                     return (
                       <tr
@@ -692,34 +602,33 @@ export default function AvailableJobListsToApply() {
                         className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors"
                       >
                         <td className="px-4 sm:px-5 py-4 text-xs text-slate-600 font-mono whitespace-nowrap">
-                          {String(idx + 1).padStart(
-                            2,
-                            "0"
-                          )}
+                          {String(idx + 1).padStart(2, "0")}
                         </td>
 
                         <td className="px-4 sm:px-5 py-4 min-w-[220px]">
-                          
-                            <div className="flex items-start gap-2.5">
-                              <span className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-400 font-bold text-xs">
-                                {job.InstitutionName.split(
-                                  " "
-                                )
-                                  .slice(0, 2)
-                                  .map((w) => w[0])
-                                  .join("")}
-                              </span>
-                            <div className="">
+                          <div className="flex items-start gap-2.5">
+                            <span className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-400 font-bold text-xs">
+                              {job.InstitutionName.split(" ")
+                                .slice(0, 2)
+                                .map((w) => w[0])
+                                .join("")}
+                            </span>
+
+                            <div>
                               <span className="text-slate-200 font-semibold leading-snug text-xs sm:text-sm break-words text-nowrap">
-                                {
-                                  job.InstitutionName 
-                                }
+                                {job.InstitutionName}
                               </span>
-                                <p> 
-                                  <a href={job?.ApplyLink} className="text-white text-xs hover:underline hover:text-rose-600" target="_blank" rel="noopener noreferrer">
-                                    Apply Now
-                                  </a>
-                                </p> 
+
+                              <p>
+                                <a
+                                  href={job?.ApplyLink}
+                                  className="text-white text-xs hover:underline hover:text-rose-600"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  Apply Now
+                                </a>
+                              </p>
                             </div>
                           </div>
                         </td>
@@ -738,25 +647,16 @@ export default function AvailableJobListsToApply() {
                           <span
                             className={`inline-flex flex-col items-center px-2.5 py-1 rounded-lg border text-xs font-bold ${gradeStyle}`}
                           >
-                            <span>
-                              Gr.{" "}
-                              {
-                                job.PositionGrade
-                              }
-                            </span>
+                            <span>Gr. {job.PositionGrade}</span>
 
                             <span className="text-[9px] opacity-70">
-                              {getGradeLabel(
-                                job.PositionGrade
-                              )}
+                              {getGradeLabel(job.PositionGrade)}
                             </span>
                           </span>
                         </td>
 
                         <td className="px-4 sm:px-5 py-4 whitespace-nowrap text-xs text-nowrap">
-                          {new Date(
-                            job.ApplyStart
-                          ).toLocaleDateString()}
+                          {new Date(job.ApplyStart).toLocaleDateString()}
                         </td>
 
                         <td className="px-4 sm:px-5 py-4">
@@ -792,20 +692,13 @@ export default function AvailableJobListsToApply() {
           <div className="px-4 sm:px-5 py-3 border-t border-slate-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <p
               className="text-[11px] sm:text-xs text-slate-600"
-              style={{
-                fontFamily: "'DM Mono', monospace",
-              }}
+              style={{ fontFamily: "'DM Mono', monospace" }}
             >
-              {filtered.length} record
-              {filtered.length !== 1
-                ? "s"
-                : ""}{" "}
-              shown
+              {filtered.length} record{filtered.length !== 1 ? "s" : ""} shown
             </p>
 
             <p className="text-[11px] sm:text-xs text-slate-700">
-              Last synced:{" "}
-              {new Date().toLocaleTimeString()}
+              Last synced: {new Date().toLocaleTimeString()}
             </p>
           </div>
         </div>

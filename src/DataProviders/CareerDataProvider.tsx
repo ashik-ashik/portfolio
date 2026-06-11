@@ -27,7 +27,6 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
 
   const { currentUserInfo, getToken, logout } = useAuth();
-  // ─── getToken comes from useAuth — single source of truth ───────────────────
 
   // ─────────────────────────────────────────────────────────────────────────
   // Centralized authenticated fetcher
@@ -38,14 +37,13 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
     async (url: string): Promise<Response> => {
       if (!getToken) throw new Error("Unauthorized: No getToken available");
 
-      // Append getToken as query param (required for Apps Script)
       const separator = url.includes("?") ? "&" : "?";
       const secureUrl = `${url}${separator}getToken=${getToken}`;
 
       const res = await fetch(secureUrl);
 
       if (res.status === 401) {
-        logout(); // clear session in useAuth
+        logout();
         throw new Error("Session expired. Please log in again.");
       }
 
@@ -59,51 +57,67 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
   );
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Main data fetch — runs whenever auth state changes
+  // PUBLIC fetch — available to ALL users (logged-in or not)
+  // Runs once on mount regardless of auth state
   // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Don't fetch until we actually have a getToken
+    const fetchPublicData = async () => {
+      try {
+        setLoading(true);
+
+        const availableJobDataRES = await fetch(
+          `${Read_Career_Info}?action=getAvailableJobs`
+        );
+        const availableJobDataData = await availableJobDataRES.json();
+        setAvailableJobData(availableJobDataData.data);
+      } catch (err: any) {
+        console.error("Failed to fetch public job data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPublicData();
+  }, []); // no auth dependency — runs for everyone
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRIVATE fetch — only runs when user is authenticated
+  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
     if (!getToken || !currentUserInfo) return;
 
-    const fetchCareerData = async () => {
+    const fetchPrivateData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // ── Career Info ────────────────────────────────────────────────────
+        // ── Career Info ──────────────────────────────────────────────────
         const CareerDataRES = await authFetch(
           `${Read_Career_Info}?action=career&user=${currentUserInfo.Role}&&${import.meta.env.VITE_ASH_TOKEN}`
         );
         const CareerData = await CareerDataRES.json();
         setCareerData(CareerData.data);
 
-        // ── Personal Info ──────────────────────────────────────────────────
+        // ── Personal Info ────────────────────────────────────────────────
         const PersonalDataRES = await authFetch(
           `${Read_Personal_Info}?action=personal&&${import.meta.env.VITE_ASH_TOKEN}`
         );
         const PersonalData = await PersonalDataRES.json();
         setPersonal(PersonalData.data);
 
-        // ── Academic Info ──────────────────────────────────────────────────
+        // ── Academic Info ────────────────────────────────────────────────
         const AcademicDataRES = await authFetch(
           `${Read_Personal_Info}?action=academic&&${import.meta.env.VITE_ASH_TOKEN}`
         );
         const AcademicData = await AcademicDataRES.json();
         setAcademic(AcademicData.data);
 
-        // ── Certificates ───────────────────────────────────────────────────
+        // ── Certificates ─────────────────────────────────────────────────
         const CertificatesDataRES = await authFetch(
           `${Read_Personal_Info}?action=certificates&&${import.meta.env.VITE_ASH_TOKEN}`
         );
         const CertificatesData = await CertificatesDataRES.json();
         setCertificates(CertificatesData.data);
-
-        // ── Available Jobs ─────────────────────────────────────────────────
-        const availableJobDataRES = await authFetch(
-          `${Read_Career_Info}?action=getAvailableJobs&&${import.meta.env.VITE_ASH_TOKEN}`
-        );
-        const availableJobDataData = await availableJobDataRES.json();
-        setAvailableJobData(availableJobDataData.data);
 
       } catch (err: any) {
         setError(err.message || "Unknown error");
@@ -112,7 +126,7 @@ export const CareerDataProvider: React.FC<Props> = ({ children }) => {
       }
     };
 
-    fetchCareerData();
+    fetchPrivateData();
   }, [currentUserInfo, getToken, authFetch]);
 
   return (
