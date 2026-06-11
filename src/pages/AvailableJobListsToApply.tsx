@@ -463,7 +463,7 @@ export default function AvailableJobListsToApply() {
           </h1>
 
           <p className="text-slate-400 text-sm sm:text-base max-w-2xl leading-relaxed">
-            Ongoing government job circulars you're eligible and interested to
+            Ongoing Government, Non-Government and Bank job circulars you're eligible and interested to
             apply for.
           </p>
         </div>
@@ -504,53 +504,64 @@ export default function AvailableJobListsToApply() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="Search institution or post..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl text-sm text-slate-200 placeholder-slate-600 border border-slate-700/50 bg-slate-800/40 focus:outline-none focus:border-indigo-500/60"
-            />
-          </div>
+<div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
+  <div className="relative flex-1">
+    <input
+      type="text"
+      placeholder="Search institution or post..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="w-full px-4 py-3 pr-10 rounded-xl text-sm text-slate-200 placeholder-slate-600 border border-slate-700/50 bg-slate-800/40 focus:outline-none focus:border-indigo-500/60"
+    />
+    {searchQuery && (
+      <button
+        onClick={() => setSearchQuery("")}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+        aria-label="Clear search"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    )}
+  </div>
 
-          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-            <select
-              value={gradeFilter}
-              onChange={(e) => setGradeFilter(e.target.value)}
-              className="w-full sm:w-[180px] px-4 py-3 rounded-xl text-sm text-slate-200 border border-slate-700/50 bg-slate-800/40"
-            >
-              <option value="all">All Grades</option>
+  <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+    <select
+      value={gradeFilter}
+      onChange={(e) => setGradeFilter(e.target.value)}
+      className="w-full sm:w-[180px] px-4 py-3 rounded-xl text-sm text-slate-200 border border-slate-700/50 bg-slate-800/40"
+    >
+      <option value="all">All Grades</option>
+      {[...new Set(filtered.map((j) => j.PositionGrade))]
+        .sort((a, b) => a - b)
+        .map((g) => (
+          <option key={g} value={g}>
+            Grade {g}
+          </option>
+        ))}
+    </select>
 
-              {[...new Set(filtered.map((j) => j.PositionGrade))]
-                .sort((a, b) => a - b)
-                .map((g) => (
-                  <option key={g} value={g}>
-                    Grade {g}
-                  </option>
-                ))}
-            </select>
-
-            <span
-              className="w-full sm:w-auto text-center px-4 py-3 rounded-xl text-sm font-semibold text-slate-400 border border-slate-700/40 bg-slate-800/30"
-              style={{ fontFamily: "'DM Mono', monospace" }}
-            >
-              {filtered.length} / {filtered.length}
-            </span>
-          </div>
-        </div>
+    <span
+      className="w-full sm:w-auto text-center px-4 py-3 rounded-xl text-sm font-semibold text-slate-400 border border-slate-700/40 bg-slate-800/30"
+      style={{ fontFamily: "'DM Mono', monospace" }}
+    >
+      {filtered.length} / {filtered.length}
+    </span>
+  </div>
+</div>
 
         {/* Table */}
         <div
-          className="rounded-2xl border border-slate-700/40 overflow-hidden"
+          className="rounded-2xl  border border-slate-700/40"
           style={{
             background: "linear-gradient(180deg,#0f1b30 0%,#0a1220 100%)",
           }}
         >
-          <div className="overflow-x-auto">
+          <div className="overflow-auto  h-[90vh]">
             <table className="w-full min-w-[920px] text-sm">
-              <thead>
+              <thead className="bg-slate-800/60 backdrop-blur-sm sticky top-0 z-10">
                 <tr className="border-b border-slate-700/50">
                   {(
                     [
@@ -567,8 +578,8 @@ export default function AvailableJobListsToApply() {
                     <th
                       key={i}
                       onClick={field ? () => toggleSort(field) : undefined}
-                      className={`px-4 sm:px-5 py-4 text-left text-xs font-bold tracking-widest uppercase text-slate-500 whitespace-nowrap ${
-                        field ? "cursor-pointer hover:text-slate-300" : ""
+                      className={`px-4 sm:px-5 py-4 text-left text-xs font-bold tracking-widest uppercase text-slate-300 whitespace-nowrap ${
+                        field ? "cursor-pointer hover:text-slate-100" : ""
                       }`}
                     >
                       <span className="inline-flex items-center gap-1.5">

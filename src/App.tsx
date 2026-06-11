@@ -28,7 +28,7 @@ const {user} = useAuth();
           <Route path={`${user && !user.email ? '/login' : '/account'}`} element={<LoginPage />}/>
           <Route path="/career" element={<ASHroute><CareerDashboard /></ASHroute>}/>
           <Route path="/personal" element={<ASHroute><PersonalDashboard /></ASHroute>}/>
-          <Route path="/apply-korte-hobe" element={<AvailableJobListsToApply />}/>
+          <Route path="/career/apply-korte-hobe" element={<AvailableJobListsToApply />}/>
           <Route path="/download" element={<FileVault />}/>
           <Route path="/*" element={<NotFound404 />}/>
         </Routes>
