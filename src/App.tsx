@@ -11,6 +11,7 @@ import useAuth from "./hooks/useAuth";
 import RainCanvas from "./components/RainBackground";
 import FileVault from "./pages/Download";
 import AvailableJobListsToApply from "./pages/AvailableJobListsToApply";
+import AddCareerData from "./pages/AddCareerData";
 
 
 
@@ -28,6 +29,7 @@ const {user} = useAuth();
           <Route path={`${user && !user.email ? '/login' : '/account'}`} element={<LoginPage />}/>
           <Route path="/career" element={<ASHroute><CareerDashboard /></ASHroute>}/>
           <Route path="/personal" element={<ASHroute><PersonalDashboard /></ASHroute>}/>
+          <Route path="/career/add-apply" element={<ASHroute><AddCareerData /></ASHroute>}/>
           <Route path="/career/apply-korte-hobe" element={<AvailableJobListsToApply />}/>
           <Route path="/download" element={<FileVault />}/>
           <Route path="/*" element={<NotFound404 />}/>

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useCareerData } from "../hooks/useCareerData";
+import { useSearchParams, useNavigate } from "react-router-dom";
 
 const API_URL = import.meta.env.VITE_CAREER_SHEET_READ_WRITE_API_URL;
 
@@ -44,6 +45,18 @@ const statusColors: Record<string, string> = {
   Unqualified: "bg-rose-500/15 text-rose-300 border-rose-500/30",
   "Not Attaint": "bg-amber-500/15 text-amber-300 border-amber-500/30",
 };
+
+function todayISO(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
+function generateSL(careerDataLength: number): string {
+  const next = careerDataLength + 1;
+  const padded = next < 10 ? `00${next}` : next < 100 ? `0${next}` : `${next}`;
+  return `ASH-${padded}`;
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SelectBadge({
   label,
@@ -103,6 +116,7 @@ function InputField({
   placeholder,
   required,
   mono,
+  prefilled,
 }: {
   label: string;
   name: string;
@@ -112,12 +126,18 @@ function InputField({
   placeholder?: string;
   required?: boolean;
   mono?: boolean;
+  prefilled?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-400">
+      <label className="text-[11px] font-semibold tracking-widest uppercase text-slate-400 flex items-center gap-1.5">
         {label}
-        {required && <span className="text-rose-400 ml-1">*</span>}
+        {required && <span className="text-rose-400">*</span>}
+        {prefilled && (
+          <span className="text-[9px] font-bold tracking-widest uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 rounded px-1.5 py-0.5">
+            auto-filled
+          </span>
+        )}
       </label>
       <input
         type={type}
@@ -127,10 +147,11 @@ function InputField({
         placeholder={placeholder}
         required={required}
         className={`
-          w-full rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2.5
+          w-full rounded-lg border bg-slate-900/80 px-3 py-2.5
           text-sm text-slate-100 placeholder:text-slate-600 outline-none
           transition-all duration-200
           focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-400
+          ${prefilled ? "border-emerald-600/50 bg-emerald-950/20" : "border-slate-700"}
           ${mono ? "font-mono tracking-wider" : ""}
         `}
       />
@@ -138,20 +159,113 @@ function InputField({
   );
 }
 
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function AddCareerData() {
-  const [form, setForm] = useState<FormData>(INITIAL_FORM);
+  const { availableJobData, careerData, setCareerData } = useCareerData();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState<FormData>({
+    ...INITIAL_FORM,
+    ApplyDate: todayISO(),
+  });
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
-  const {careerData, setCareerData} = useCareerData();
+  const [prefilledFields, setPrefilledFields] = useState<Set<keyof FormData>>(new Set());
 
+  // ── Sync SL once careerData loads (only if user hasn't manually changed it) ─
+  useEffect(() => {
+    if (!careerData?.length) return;
+    const xxxxxxxxxxxx = () => {
+      setForm((prev) => {
+      // Don't overwrite if user already typed something custom
+      // const autoSL = generateSL(careerData.length - 1); // length-1 because current last is the latest
+      const prevWasAuto =
+        prev.SL === "" || prev.SL.match(/^ASH-\d+$/);
+      if (!prevWasAuto) return prev;
+      return { ...prev, SL: generateSL(careerData.length) };
+    });
+    }
+    xxxxxxxxxxxx()
+  }, [careerData]);
+
+  // ── Read URL params and auto-fill form ────────────────────────────────────
+  useEffect(() => {
+    const institute = searchParams.get("institute");
+    const post = searchParams.get("post");
+    const postsCount = searchParams.get("posts");
+
+    if (!institute && !post) return;
+
+    const matchedJob = availableJobData.find(
+      (job) =>
+        job.InstitutionName?.trim().toLowerCase() === institute?.trim().toLowerCase() &&
+        job.PostName?.trim().toLowerCase() === post?.trim().toLowerCase()
+    );
+
+    const filled = new Set<keyof FormData>();
+
+    const setFormDataAuto = () => {
+      setForm((prev) => {
+      const next: FormData = {
+        ...prev,
+        ApplyDate: todayISO(),
+      };
+      filled.add("ApplyDate");
+
+      if (matchedJob) {
+        if (matchedJob.InstitutionName) {
+          next.Institute = matchedJob.InstitutionName;
+          filled.add("Institute");
+        }
+        if (matchedJob.PostName) {
+          next.Position = matchedJob.PostName;
+          filled.add("Position");
+        }
+        if (matchedJob.NumberOfPosts) {
+          next.Posts = String(matchedJob.NumberOfPosts);
+          filled.add("Posts");
+        }
+      } else {
+        if (institute) {
+          next.Institute = institute;
+          filled.add("Institute");
+        }
+        if (post) {
+          next.Position = post;
+          filled.add("Position");
+        }
+        if (postsCount) {
+          next.Posts = postsCount;
+          filled.add("Posts");
+        }
+      }
+
+      return next;
+    });
+
+    setPrefilledFields(filled);
+    }
+    setFormDataAuto ();
+  }, [availableJobData, searchParams]);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
   const set = (key: keyof FormData) => (v: string) =>
     setForm((f) => ({ ...f, [key]: v }));
 
   const handleSubmit = async () => {
-    if (!form.SL || !form.Institute || !form.Position || !form.ApplyDate) {
+    // Validate against actual form state — all values must be real strings
+    const missing: string[] = [];
+    if (!form.SL.trim())        missing.push("SL No.");
+    if (!form.Institute.trim()) missing.push("Institute");
+    if (!form.Position.trim())  missing.push("Position");
+    if (!form.ApplyDate.trim()) missing.push("Apply Date");
+
+    if (missing.length > 0) {
       setStatus("error");
-      setMessage("Please fill in all required fields.");
+      setMessage(`Please fill in: ${missing.join(", ")}`);
       return;
     }
 
@@ -170,15 +284,20 @@ export default function AddCareerData() {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
+      setCareerData([...careerData, { ...form }]);
       setStatus("success");
-      setMessage("Entry added successfully!");
-      setCareerData([
-        ...careerData,
-        {
-        ...form
-        },
-    ]);
-      setForm(INITIAL_FORM);
+      setMessage("Entry added successfully! Redirecting…");
+
+      // Reset after flagging success so the user sees the message briefly
+      setTimeout(() => {
+        setForm({
+          ...INITIAL_FORM,
+          ApplyDate: todayISO(),
+          SL: generateSL(careerData.length + 1),
+        });
+        setPrefilledFields(new Set());
+        navigate("/career/apply-korte-hobe");
+      }, 1200);
     } catch (err: unknown) {
       setStatus("error");
       setMessage(err instanceof Error ? err.message : "Submission failed.");
@@ -186,16 +305,21 @@ export default function AddCareerData() {
   };
 
   const handleReset = () => {
-    setForm(INITIAL_FORM);
+    setForm({
+      ...INITIAL_FORM,
+      ApplyDate: todayISO(),
+      SL: generateSL(careerData?.length ?? 0),
+    });
+    setPrefilledFields(new Set());
     setStatus("idle");
     setMessage("");
   };
 
-//   console.log(  )
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="max-w-5xl m-auto py-10 px-2">
-      <div className="">
+      <div>
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -203,24 +327,71 @@ export default function AddCareerData() {
             <h1 className="text-xl font-bold text-white tracking-tight">Add Career Entry</h1>
             <p className="text-sm text-slate-500 mt-0.5">Log a new application to your career tracker sheet</p>
           </div>
-          <span className="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded px-2 py-1">
-            WRITE
-          </span>
+          <div className="flex items-center gap-2">
+            {prefilledFields.size > 0 && (
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-2 py-1">
+                AUTO-FILLED
+              </span>
+            )}
+            <span className="text-[10px] font-mono text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded px-2 py-1">
+              WRITE
+            </span>
+          </div>
         </div>
 
-        {/* Form card */}
-        <div className="">
+        {/* Auto-fill banner */}
+        {prefilledFields.size > 0 && (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-600/30 bg-emerald-950/30 px-4 py-3">
+            <svg className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" />
+            </svg>
+            <p className="text-xs text-emerald-300 leading-relaxed">
+              Some fields were <span className="font-semibold">auto-filled</span> from the circular you selected.
+              Review them before submitting, and fill in the remaining required fields.
+            </p>
+          </div>
+        )}
+
+        {/* Form */}
+        <div>
 
           {/* Section: Identity */}
-          <h6 className="text-gray-200 text-xs p-4">Last SL: {careerData?.[careerData.length - 1]?.SL || "Unknown"}</h6>
+          <h6 className="text-gray-200 text-xs p-4">
+            Last SL: {careerData?.[careerData.length - 1]?.SL || "Unknown"}
+          </h6>
+
           <div className="px-1 py-5 border-b border-slate-800">
             <p className="text-[11px] font-semibold tracking-widest uppercase text-indigo-400 mb-4">
               01 · Identity
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <InputField label="SL No." name="SL" value={form.SL || "ASH-"} onChange={set("SL")} placeholder="ASH-005" required mono />
-              <InputField label="Institute" name="Institute" value={form.Institute} onChange={set("Institute")} placeholder="e.g. BCS 47" required />
-              <InputField label="Position" name="Position" value={form.Position} onChange={set("Position")} placeholder="e.g. Sub Inspector of Food" required />
+              <InputField
+                label="SL No."
+                name="SL"
+                value={form.SL}
+                onChange={set("SL")}
+                placeholder="ASH-005"
+                required
+                mono
+              />
+              <InputField
+                label="Institute"
+                name="Institute"
+                value={form.Institute}
+                onChange={set("Institute")}
+                placeholder="e.g. BCS 47"
+                required
+                prefilled={prefilledFields.has("Institute")}
+              />
+              <InputField
+                label="Position"
+                name="Position"
+                value={form.Position}
+                onChange={set("Position")}
+                placeholder="e.g. Sub Inspector of Food"
+                required
+                prefilled={prefilledFields.has("Position")}
+              />
             </div>
           </div>
 
@@ -230,10 +401,39 @@ export default function AddCareerData() {
               02 · Credentials
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-              <InputField label="User ID" name="UserID" value={form.UserID} onChange={set("UserID")} placeholder="H37FMLTG" mono />
-              <InputField label="Password" name="Password" value={form.Password} onChange={set("Password")} placeholder="U699229M" mono />
-              <InputField label="Posts" name="Posts" value={form.Posts} onChange={set("Posts")} placeholder="Number of posts" />
-              <InputField label="Apply Date" name="ApplyDate" value={form.ApplyDate} onChange={set("ApplyDate")} type="date" required />
+              <InputField
+                label="User ID"
+                name="UserID"
+                value={form.UserID}
+                onChange={set("UserID")}
+                placeholder="H37FMLTG"
+                mono
+              />
+              <InputField
+                label="Password"
+                name="Password"
+                value={form.Password}
+                onChange={set("Password")}
+                placeholder="U699229M"
+                mono
+              />
+              <InputField
+                label="Posts"
+                name="Posts"
+                value={form.Posts}
+                onChange={set("Posts")}
+                placeholder="Number of posts"
+                prefilled={prefilledFields.has("Posts")}
+              />
+              <InputField
+                label="Apply Date"
+                name="ApplyDate"
+                value={form.ApplyDate}
+                onChange={set("ApplyDate")}
+                type="date"
+                required
+                prefilled={prefilledFields.has("ApplyDate")}
+              />
             </div>
           </div>
 
@@ -268,7 +468,7 @@ export default function AddCareerData() {
             )}
           </div>
 
-          {/* Footer: feedback + actions */}
+          {/* Footer */}
           <div className="px-5 py-4 bg-slate-800/40 border-t border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {message && (
               <div className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium border flex items-center gap-2 ${
@@ -292,7 +492,7 @@ export default function AddCareerData() {
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={status === "loading"}
+                disabled={status === "loading" || status === "success"}
                 className="px-6 py-2 rounded-lg text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {status === "loading" ? (
@@ -302,6 +502,13 @@ export default function AddCareerData() {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
                     Posting…
+                  </>
+                ) : status === "success" ? (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Redirecting…
                   </>
                 ) : (
                   <>

@@ -1,8 +1,38 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import type { JobCircular } from "../services/careerDataTypes";
 import { useCareerData } from "../hooks/useCareerData";
 import useAuth from "../hooks/useAuth";
 import MatrixLoader from "../components/MatrixLoader";
+
+// ─── Constants ─────────────────────────────────────────────────────────────────
+
+const LOCAL_APPLIED_KEY = "ash_local_applied_jobs";
+
+// ─── Local Storage Helpers ────────────────────────────────────────────────────
+
+function makeJobKey(institutionName: string, postName: string): string {
+  return `${institutionName.trim().toLowerCase()}||${postName.trim().toLowerCase()}`;
+}
+
+function getLocalAppliedJobs(): Set<string> {
+  try {
+    const raw = localStorage.getItem(LOCAL_APPLIED_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return new Set<string>(parsed);
+  } catch {
+    // ignore parse errors
+  }
+  return new Set();
+}
+
+function saveLocalAppliedJobs(set: Set<string>): void {
+  try {
+    localStorage.setItem(LOCAL_APPLIED_KEY, JSON.stringify([...set]));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -178,6 +208,45 @@ function PdfModal({ url, title, onClose }: PdfModalProps) {
   );
 }
 
+// ─── Undo Toast ───────────────────────────────────────────────────────────────
+
+interface UndoToastProps {
+  message: string;
+  onUndo: () => void;
+  onDismiss: () => void;
+}
+
+function UndoToast({ message, onUndo, onDismiss }: UndoToastProps) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 5000);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-700/50 bg-slate-900/95 shadow-2xl backdrop-blur-sm text-sm text-slate-200 animate-fade-in-up">
+      <svg className="w-4 h-4 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+      </svg>
+      <span>{message}</span>
+      <button
+        onClick={onUndo}
+        className="ml-2 text-xs font-bold text-emerald-400 hover:text-emerald-300 underline underline-offset-2 transition-colors"
+      >
+        Undo
+      </button>
+      <button
+        onClick={onDismiss}
+        className="ml-1 text-slate-500 hover:text-slate-300 transition-colors"
+        aria-label="Dismiss"
+      >
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 
 interface StatCardProps {
@@ -253,6 +322,57 @@ export default function AvailableJobListsToApply() {
 
   const GOOGLE_FORM_URL = "https://forms.gle/8dDUXndbLcSTE1Bd9";
 
+  // ── Determine if user should use localStorage (non-admin, non-logged-in) ──
+  const isAdmin =
+    currentUserInfo?.Role === import.meta.env.VITE_ASH_ADMIN_SECRET_ROLE;
+  const isLoggedIn = !!currentUserInfo;
+  const useLocalStorage = !isAdmin;
+
+  // ── Local applied state ────────────────────────────────────────────────────
+  const [localApplied, setLocalApplied] = useState<Set<string>>(() =>
+    getLocalAppliedJobs()
+  );
+
+  // Toast state for undo
+  const [toast, setToast] = useState<{
+    message: string;
+    jobKey: string;
+  } | null>(null);
+
+  // Persist whenever localApplied changes
+  useEffect(() => {
+    if (useLocalStorage) {
+      saveLocalAppliedJobs(localApplied);
+    }
+  }, [localApplied, useLocalStorage]);
+
+  const handleLocalMarkApplied = useCallback(
+    (institutionName: string, postName: string) => {
+      const key = makeJobKey(institutionName, postName);
+      setLocalApplied((prev) => {
+        const next = new Set(prev);
+        next.add(key);
+        return next;
+      });
+      setToast({
+        message: `Marked "${postName}" as applied.`,
+        jobKey: key,
+      });
+    },
+    []
+  );
+
+  const handleUndoApplied = useCallback(() => {
+    if (!toast) return;
+    const key = toast.jobKey;
+    setLocalApplied((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    setToast(null);
+  }, [toast]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<keyof JobCircular>("ApplyEnds");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -265,20 +385,28 @@ export default function AvailableJobListsToApply() {
   // ── Filter + Sort ──────────────────────────────────────────────────────────
 
   const filtered = useMemo(() => {
-    // Only filter out already-applied jobs for logged-in users who have career data.
-    // Guests and non-logged-in users see all available jobs.
-    let data =
-      currentUserInfo && careerData?.length
-        ? availableJobData.filter((job) => {
-            return !(careerData as Career[]).some(
-              (career) =>
-                career.Institute?.trim().toLowerCase() ===
-                  job.InstitutionName?.trim().toLowerCase() &&
-                career.Position?.trim().toLowerCase() ===
-                  job.PostName?.trim().toLowerCase()
-            );
-          })
-        : [...availableJobData];
+    let data = [...availableJobData];
+
+    // For logged-in admin users: filter out jobs already in careerData (existing behaviour)
+    if (isLoggedIn && careerData?.length) {
+      data = data.filter((job) => {
+        return !(careerData as Career[]).some(
+          (career) =>
+            career.Institute?.trim().toLowerCase() ===
+              job.InstitutionName?.trim().toLowerCase() &&
+            career.Position?.trim().toLowerCase() ===
+              job.PostName?.trim().toLowerCase()
+        );
+      });
+    }
+
+    // For all users using localStorage: additionally filter out locally applied jobs
+    if (useLocalStorage && localApplied.size > 0) {
+      data = data.filter((job) => {
+        const key = makeJobKey(job.InstitutionName, job.PostName);
+        return !localApplied.has(key);
+      });
+    }
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -319,7 +447,9 @@ export default function AvailableJobListsToApply() {
     sortDir,
     gradeFilter,
     careerData,
-    currentUserInfo,
+    isLoggedIn,
+    useLocalStorage,
+    localApplied,
   ]);
 
   // ── Stats ──────────────────────────────────────────────────────────────────
@@ -402,6 +532,9 @@ export default function AvailableJobListsToApply() {
     return <MatrixLoader />;
   }
 
+  // Count locally applied for display
+  const localAppliedCount = useLocalStorage ? localApplied.size : 0;
+
   return (
     <div
       className="min-h-screen w-full text-slate-100 overflow-x-hidden"
@@ -415,6 +548,15 @@ export default function AvailableJobListsToApply() {
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap"
         rel="stylesheet"
       />
+
+      {/* Undo Toast */}
+      {toast && (
+        <UndoToast
+          message={toast.message}
+          onUndo={handleUndoApplied}
+          onDismiss={() => setToast(null)}
+        />
+      )}
 
       {pdfModal && (
         <PdfModal
@@ -441,18 +583,41 @@ export default function AvailableJobListsToApply() {
               </span>
             </div>
 
-            {/* ── Admin-only action ── */}
-            {currentUserInfo?.Role ===
-              import.meta.env.VITE_ASH_ADMIN_SECRET_ROLE && (
-              <a
-                href={GOOGLE_FORM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-indigo-300 border border-indigo-600/40 bg-indigo-950/30 hover:bg-indigo-900/50 hover:border-indigo-500/60 hover:text-indigo-200 transition-all"
-              >
-                Add New Circular
-              </a>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* ── Local applied badge (non-admin only) ── */}
+              {useLocalStorage && localAppliedCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-emerald-300 border border-emerald-700/40 bg-emerald-950/30">
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    {localAppliedCount} applied (hidden)
+                  </span>
+                  <button
+                    onClick={() => {
+                      setLocalApplied(new Set());
+                      setToast(null);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 border border-slate-700/40 bg-slate-800/30 hover:border-slate-600/60 hover:text-slate-200 transition-colors"
+                    title="Show all hidden jobs again"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
+
+              {/* ── Admin-only action ── */}
+              {isAdmin && (
+                <a
+                  href={GOOGLE_FORM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-indigo-300 border border-indigo-600/40 bg-indigo-950/30 hover:bg-indigo-900/50 hover:border-indigo-500/60 hover:text-indigo-200 transition-all"
+                >
+                  Add New Circular
+                </a>
+              )}
+            </div>
           </div>
 
           <h1
@@ -466,6 +631,18 @@ export default function AvailableJobListsToApply() {
             Ongoing Government, Non-Government and Bank job circulars you're eligible and interested to
             apply for.
           </p>
+
+          {/* Info banner for guests / non-admin logged-in users */}
+          {useLocalStorage && (
+            <p className="mt-3 text-[11px] sm:text-xs text-slate-500 flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-slate-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {isLoggedIn
+                ? "Applied jobs are saved locally on this device."
+                : "Sign in to sync applied jobs. For now, they're saved on this device only."}
+            </p>
+          )}
         </div>
 
         {/* Stats */}
@@ -504,62 +681,62 @@ export default function AvailableJobListsToApply() {
         </div>
 
         {/* Filters */}
-<div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
-  <div className="relative flex-1">
-    <input
-      type="text"
-      placeholder="Search institution or post..."
-      value={searchQuery}
-      onChange={(e) => setSearchQuery(e.target.value)}
-      className="w-full px-4 py-3 pr-10 rounded-xl text-sm text-slate-200 placeholder-slate-600 border border-slate-700/50 bg-slate-800/40 focus:outline-none focus:border-indigo-500/60"
-    />
-    {searchQuery && (
-      <button
-        onClick={() => setSearchQuery("")}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
-        aria-label="Clear search"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18" />
-          <line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
-      </button>
-    )}
-  </div>
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-6">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search institution or post..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-3 pr-10 rounded-xl text-sm text-slate-200 placeholder-slate-600 border border-slate-700/50 bg-slate-800/40 focus:outline-none focus:border-indigo-500/60"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                aria-label="Clear search"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
+          </div>
 
-  <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-    <select
-      value={gradeFilter}
-      onChange={(e) => setGradeFilter(e.target.value)}
-      className="w-full sm:w-[180px] px-4 py-3 rounded-xl text-sm text-slate-200 border border-slate-700/50 bg-slate-800/40"
-    >
-      <option value="all">All Grades</option>
-      {[...new Set(filtered.map((j) => j.PositionGrade))]
-        .sort((a, b) => a - b)
-        .map((g) => (
-          <option key={g} value={g}>
-            Grade {g}
-          </option>
-        ))}
-    </select>
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            <select
+              value={gradeFilter}
+              onChange={(e) => setGradeFilter(e.target.value)}
+              className="w-full sm:w-[180px] px-4 py-3 rounded-xl text-sm text-slate-200 border border-slate-700/50 bg-slate-800/40"
+            >
+              <option value="all">All Grades</option>
+              {[...new Set(filtered.map((j) => j.PositionGrade))]
+                .sort((a, b) => a - b)
+                .map((g) => (
+                  <option key={g} value={g}>
+                    Grade {g}
+                  </option>
+                ))}
+            </select>
 
-    <span
-      className="w-full sm:w-auto text-center px-4 py-3 rounded-xl text-sm font-semibold text-slate-400 border border-slate-700/40 bg-slate-800/30"
-      style={{ fontFamily: "'DM Mono', monospace" }}
-    >
-      {filtered.length} / {filtered.length}
-    </span>
-  </div>
-</div>
+            <span
+              className="w-full sm:w-auto text-center px-4 py-3 rounded-xl text-sm font-semibold text-slate-400 border border-slate-700/40 bg-slate-800/30"
+              style={{ fontFamily: "'DM Mono', monospace" }}
+            >
+              {filtered.length} / {filtered.length}
+            </span>
+          </div>
+        </div>
 
         {/* Table */}
         <div
-          className="rounded-2xl  border border-slate-700/40"
+          className="rounded-2xl border border-slate-700/40"
           style={{
             background: "linear-gradient(180deg,#0f1b30 0%,#0a1220 100%)",
           }}
         >
-          <div className="overflow-auto  h-[90vh]">
+          <div className="overflow-auto h-[90vh]">
             <table className="w-full min-w-[920px] text-sm">
               <thead className="bg-slate-800/60 backdrop-blur-sm sticky top-0 z-10">
                 <tr className="border-b border-slate-700/50">
@@ -598,7 +775,9 @@ export default function AvailableJobListsToApply() {
                       colSpan={8}
                       className="py-16 text-center text-slate-600"
                     >
-                      No circulars found.
+                      {useLocalStorage && localAppliedCount > 0
+                        ? `No circulars found. You've hidden ${localAppliedCount} applied job${localAppliedCount !== 1 ? "s" : ""}.`
+                        : "No circulars found."}
                     </td>
                   </tr>
                 ) : (
@@ -607,15 +786,26 @@ export default function AvailableJobListsToApply() {
                     const deadline = getDeadlineStatus(daysLeft);
                     const gradeStyle = getGradeColor(job.PositionGrade);
 
+                    // Build the "Mark as Applied" URL with all identifying params (for admin users)
+                    const markAsAppliedUrl = `/career/add-apply?institute=${encodeURIComponent(
+                      job.InstitutionName
+                    )}&post=${encodeURIComponent(
+                      job.PostName
+                    )}&grade=${job.PositionGrade}&posts=${
+                      job.NumberOfPosts
+                    }&applyEnd=${encodeURIComponent(job.ApplyEnds)}`;
+
                     return (
                       <tr
                         key={`${job.Timestamp}-${idx}`}
                         className="border-b border-slate-800/60 hover:bg-slate-800/30 transition-colors"
                       >
+                        {/* # */}
                         <td className="px-4 sm:px-5 py-4 text-xs text-slate-600 font-mono whitespace-nowrap">
                           {String(idx + 1).padStart(2, "0")}
                         </td>
 
+                        {/* Institution */}
                         <td className="px-4 sm:px-5 py-4 min-w-[220px]">
                           <div className="flex items-start gap-2.5">
                             <span className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-950/60 border border-indigo-800/40 text-indigo-400 font-bold text-xs">
@@ -644,16 +834,19 @@ export default function AvailableJobListsToApply() {
                           </div>
                         </td>
 
-                        <td className="px-4 sm:px-5 py-4 min-w-[240px]">
-                          <span className="text-slate-300 font-medium block text-xs sm:text-sm leading-snug text-nowrap">
+                        {/* Post Name */}
+                        <td className="px-4 sm:px-5 py-4 max-w-[240px]">
+                          <span className="text-slate-300 font-medium block text-xs sm:text-sm leading-snug text-wrap break-words">
                             {job.PostName}
                           </span>
                         </td>
 
+                        {/* Vacancies */}
                         <td className="px-4 sm:px-5 py-4 whitespace-nowrap text-nowrap">
                           {job.NumberOfPosts}
                         </td>
 
+                        {/* Grade */}
                         <td className="px-4 sm:px-5 py-4 text-nowrap">
                           <span
                             className={`inline-flex flex-col items-center px-2.5 py-1 rounded-lg border text-xs font-bold ${gradeStyle}`}
@@ -666,18 +859,71 @@ export default function AvailableJobListsToApply() {
                           </span>
                         </td>
 
+                        {/* Apply Window */}
                         <td className="px-4 sm:px-5 py-4 whitespace-nowrap text-xs text-nowrap">
                           {new Date(job.ApplyStart).toLocaleDateString()}
                         </td>
 
+                        {/* Deadline + Mark as Applied */}
                         <td className="px-4 sm:px-5 py-4">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${deadline.color} ${deadline.bg} text-nowrap`}
-                          >
-                            {deadline.label}
-                          </span>
+                          <div className="flex flex-col items-start gap-1.5">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold ${deadline.color} ${deadline.bg} text-nowrap`}
+                            >
+                              {deadline.label}
+                            </span>
+
+                            {/* Mark as Applied: admin uses link, others use localStorage button */}
+                            {isAdmin ? (
+                              <a
+                                href={markAsAppliedUrl}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 hover:underline underline-offset-2 transition-colors text-nowrap"
+                              >
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2.5}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                Mark as Applied
+                              </a>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  handleLocalMarkApplied(
+                                    job.InstitutionName,
+                                    job.PostName
+                                  )
+                                }
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 hover:text-emerald-300 hover:underline underline-offset-2 transition-colors text-nowrap bg-transparent border-0 cursor-pointer p-0"
+                              >
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth={2.5}
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
+                                Mark as Applied
+                              </button>
+                            )}
+                          </div>
                         </td>
 
+                        {/* Circular PDF */}
                         <td className="px-4 sm:px-5 py-4">
                           <button
                             onClick={() =>
@@ -706,6 +952,11 @@ export default function AvailableJobListsToApply() {
               style={{ fontFamily: "'DM Mono', monospace" }}
             >
               {filtered.length} record{filtered.length !== 1 ? "s" : ""} shown
+              {useLocalStorage && localAppliedCount > 0 && (
+                <span className="text-slate-700 ml-2">
+                  · {localAppliedCount} hidden
+                </span>
+              )}
             </p>
 
             <p className="text-[11px] sm:text-xs text-slate-700">
