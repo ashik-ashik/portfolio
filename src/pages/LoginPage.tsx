@@ -60,11 +60,14 @@ const LoggedInView: React.FC<{ user: any; onLogout: () => void }> = ({
     },
     {
       icon: <Star className="w-5 h-5" />,
-      label: "Favourites",
-      desc: "Pinned items & lists",
+      label: "Job Circular Collection",
+      desc: "View collected job circulars",
       color: "from-violet-500/20 to-violet-500/5",
       border: "border-violet-400/25",
       accent: "text-violet-300",
+      link: currentUserInfo?.Role === "ASH_SYSTEM_CORE"
+        ? "/career/apply-korte-hobe"
+        : "/career/apply-korte-hobe"
     },
     {
       icon: <Zap className="w-5 h-5" />,
@@ -73,6 +76,9 @@ const LoggedInView: React.FC<{ user: any; onLogout: () => void }> = ({
       color: "from-amber-500/20 to-amber-500/5",
       border: "border-amber-400/25",
       accent: "text-amber-300",
+      link: currentUserInfo?.Role === "ASH_SYSTEM_CORE"
+        ? "/integrations"
+        : "/"
     },
   ];
 

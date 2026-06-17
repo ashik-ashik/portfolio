@@ -38,26 +38,30 @@ type RowVariant =
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function isQualified(val?: string): boolean {
-  return val?.trim().toLowerCase() === "qualified";
+function toStr(val?: unknown): string {
+  return val === null || val === undefined ? "" : String(val);
 }
-function isUnqualified(val?: string): boolean {
-  return val?.trim().toLowerCase() === "unqualified";
+
+function isQualified(val?: unknown): boolean {
+  return toStr(val).trim().toLowerCase() === "qualified";
 }
-function isNotAttained(val?: string): boolean {
-  const v = val?.trim().toLowerCase() ?? "";
+function isUnqualified(val?: unknown): boolean {
+  return toStr(val).trim().toLowerCase() === "unqualified";
+}
+function isNotAttained(val?: unknown): boolean {
+  const v = toStr(val).trim().toLowerCase();
   return v === "not attaint" || v === "not attained";
 }
-function isPending(val?: string): boolean {
-  return val?.trim() === "↔";
+function isPending(val?: unknown): boolean {
+  return toStr(val).trim() === "↔";
 }
 
 function getRowVariant(d: Career): RowVariant {
-  if (!d.ExamStatus || d.ExamStatus.trim().toLowerCase() === "future") return "future";
+  if (!d.ExamStatus || toStr(d.ExamStatus).trim().toLowerCase() === "future") return "future";
 
-  const p = d.Preliminary?.trim() ?? "";
-  const w = d.Written?.trim()     ?? "";
-  const v = d.Viva?.trim()        ?? "";
+  const p = toStr(d.Preliminary).trim();
+  const w = toStr(d.Written).trim();
+  const v = toStr(d.Viva).trim();
 
   if (isNotAttained(p)) return "not_attained";
 
@@ -129,24 +133,32 @@ const VARIANT_META: Record<RowVariant, {
   },
 };
 
-function formatDate(raw?: string): string {
-  if (!raw) return "—";
-  return raw.trim();
+function formatDate(raw?: unknown): string {
+  if (raw === null || raw === undefined) return "—";
+  const s = String(raw).trim();
+  return s === "" ? "—" : s;
 }
 
-function formatPosts(raw?: string): string {
-  if (!raw || raw === "") return "—";
-  if (raw === "not specific") return "Open";
-  return raw;
+function formatPosts(raw?: unknown): string {
+  if (raw === null || raw === undefined) return "—";
+  const s = String(raw).trim();
+  if (s === "") return "—";
+  if (s === "not specific") return "Open";
+  return s;
+}
+
+function hasValue(val?: unknown): boolean {
+  if (val === null || val === undefined) return false;
+  return String(val).trim() !== "";
 }
 
 // ── Round Pill ────────────────────────────────────────────────────────────────
 
-const RoundPill = ({ val }: { val?: string }) => {
-  if (!val || val.trim() === "") {
+const RoundPill = ({ val }: { val?: unknown }) => {
+  const v = val === null || val === undefined ? "" : String(val).trim();
+  if (v === "") {
     return <span className="text-gray-700 text-xs">—</span>;
   }
-  const v = val.trim();
   if (isQualified(v))    return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✓ Qualified</span>;
   if (isUnqualified(v))  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/20 text-red-300 border border-red-500/30">✗ Unqualified</span>;
   if (isNotAttained(v))  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-700/60 text-gray-400 border border-gray-600/50">– Not Attained</span>;
@@ -271,6 +283,154 @@ const RowDetail = ({ record, onClose }: { record: Career; onClose: () => void })
   );
 };
 
+// ── Mobile Record Card ────────────────────────────────────────────────────────
+// Shows all available data, skipping any field (label + value) that is blank.
+
+interface MobileRecordCardProps {
+  record: Career;
+  idx: number;
+  tab: Tab;
+  showCredentials: boolean;
+  onSelect: (record: Career) => void;
+}
+
+const MobileRecordCard = ({ record, idx, tab, showCredentials, onSelect }: MobileRecordCardProps) => {
+  const variant = getRowVariant(record);
+  const meta = VARIANT_META[variant];
+  const progress = (() => {
+    if (variant === "viva_qualified")    return 100;
+    if (variant === "written_qualified") return 67;
+    if (variant === "prelim_qualified")  return 33;
+    if (variant === "pending")           return 20;
+    return 0;
+  })();
+
+  const formattedApplyDate = record.ApplyDate
+    ? new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(new Date(record.ApplyDate))
+    : "";
+
+  const isDone = toStr(record.ExamStatus).trim().toLowerCase() === "done";
+
+  // Build a list of meta rows, skipping anything blank
+  const metaRows: { label: string; node: React.ReactNode; copy?: string }[] = [];
+
+  if (hasValue(record.Position)) {
+    metaRows.push({ label: "Position", node: <span className="text-gray-300">{record.Position}</span> });
+  }
+  if (hasValue(record.Posts)) {
+    metaRows.push({ label: "Posts", node: <span className="text-gray-300 font-mono">{formatPosts(record.Posts)}</span> });
+  }
+  if (formattedApplyDate) {
+    metaRows.push({ label: "Apply Date", node: <span className="text-gray-300 font-mono">{formattedApplyDate}</span> });
+  }
+  if (showCredentials && hasValue(record.UserID)) {
+    metaRows.push({
+      label: "User ID",
+      node: <span className="text-gray-300 font-mono break-all">{record.UserID}</span>,
+      copy: record.UserID,
+    });
+  }
+  if (showCredentials && hasValue(record.Password)) {
+    metaRows.push({
+      label: "Password",
+      node: (
+        <span className="text-gray-300 font-mono break-all blur-[4px] hover:blur-none transition-all select-none">
+          {record.Password}
+        </span>
+      ),
+      copy: record.Password,
+    });
+  }
+
+  // Round pills, skip blank ones (and their labels)
+  const roundPills: { label: string; val?: string }[] = [
+    { label: "Prelim", val: record.Preliminary },
+    { label: "Written", val: record.Written },
+    { label: "Viva", val: record.Viva },
+  ].filter((r) => hasValue(r.val));
+
+  return (
+    <div
+      onClick={() => onSelect(record)}
+      className={`rounded-xl border-l-2 ${meta.rowBorder} ${meta.rowBg} border border-gray-800/60 p-4 flex flex-col gap-3 active:brightness-110 transition-all cursor-pointer`}
+    >
+      {/* Header row: SL + Institute + Stage badge */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0">
+          <span className="text-gray-600 font-mono text-[11px] pt-0.5 shrink-0">
+            {record.SL || String(idx + 1)}
+          </span>
+          {hasValue(record.Institute) && (
+            <span className="font-semibold text-gray-200 text-sm leading-snug break-words">
+              {record.Institute}
+            </span>
+          )}
+        </div>
+        <span className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${meta.badge}`}>
+          <span className={`w-1 h-1 rounded-full ${meta.dot}`} />
+          {meta.label}
+        </span>
+      </div>
+
+      {/* Exam status badge */}
+      <div>
+        {isDone ? (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            <span className="w-1 h-1 rounded-full bg-emerald-400" /> Done
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30">
+            <span className="w-1 h-1 rounded-full bg-violet-400 animate-pulse" /> Future
+          </span>
+        )}
+      </div>
+
+      {/* Meta rows (label/value), blanks already filtered out */}
+      {metaRows.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {metaRows.map(({ label, node, copy }) => (
+            <div key={label} className="bg-gray-900/50 rounded-lg p-2.5">
+              <p className="text-[10px] text-gray-500 mb-1">{label}</p>
+              <div className="flex items-center gap-1" onClick={(e) => copy && e.stopPropagation()}>
+                {node}
+                {copy && <CopyBtn text={copy} />}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Round pills, blanks skipped */}
+      {roundPills.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-gray-800/60">
+          {roundPills.map(({ label, val }) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <span className="text-[10px] text-gray-500">{label}</span>
+              <RoundPill val={val} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Pipeline progress (Done tab only) */}
+      {tab === "done" && (
+        <div className="flex items-center gap-1.5 pt-1">
+          <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progress}%`,
+                background: progress === 100 ? "#34d399" : progress >= 67 ? "#38bdf8" : progress >= 33 ? "#818cf8" : "#f59e0b",
+              }}
+            />
+          </div>
+          <span className="text-gray-600 font-mono text-[10px] w-8 text-right">{progress}%</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 const CareerJobRecords = () => {
@@ -287,11 +447,11 @@ const CareerJobRecords = () => {
 
   // Split into tabs
   const upcoming = useMemo(
-    () => data.filter((d) => d.ExamStatus?.trim().toLowerCase() === "future"),
+    () => data.filter((d) => toStr(d.ExamStatus).trim().toLowerCase() === "future"),
     [data]
   );
   const done = useMemo(
-    () => data.filter((d) => d.ExamStatus?.trim().toLowerCase() === "done"),
+    () => data.filter((d) => toStr(d.ExamStatus).trim().toLowerCase() === "done"),
     [data]
   );
 
@@ -375,10 +535,10 @@ if (search.trim()) {
   );
 
   return (
-    <div className="flex-1 overflow-hidden flex flex-col bg-gray-950 h-full">
+    <div className="flex-1 flex flex-col bg-gray-950 md:overflow-hidden md:h-full">
 
       {/* ── Header ── */}
-      <div className="px-6 pt-6 pb-4 space-y-4 border-b border-gray-800">
+      <div className="px-4 sm:px-6 pt-6 pb-4 space-y-4 border-b border-gray-800">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-xl font-bold text-white tracking-tight">Job Records</h2>
@@ -443,7 +603,7 @@ if (search.trim()) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search institute, position…"
-              className="bg-gray-900 border border-gray-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-indigo-500 w-56 transition-colors"
+              className="bg-gray-900 border border-gray-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-indigo-500 w-full sm:w-56 transition-colors"
             />
             {search && (
               <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-200">
@@ -479,10 +639,10 @@ if (search.trim()) {
         {tab === "done" && <Legend />}
       </div>
 
-      {/* ── Table ── */}
-      <div className="flex-1 overflow-auto">
+      {/* ── Content: mobile cards / desktop table ── */}
+      <div className="flex-1 md:overflow-auto">
         {processed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-20">
+          <div className="flex flex-col items-center justify-center md:h-full gap-3 text-center py-20">
             <div className="w-14 h-14 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" strokeLinecap="round" /><rect x="9" y="3" width="6" height="4" rx="1" /></svg>
             </div>
@@ -490,143 +650,160 @@ if (search.trim()) {
             {search && <button onClick={() => setSearch("")} className="text-indigo-400 text-xs hover:underline">Clear search</button>}
           </div>
         ) : (
-          <table className="w-full text-xs border-collapse min-w-[900px]">
-            <thead className="sticky top-0 z-10 bg-gray-950 border-b border-gray-800">
-              <tr>
-                <TH label="#"          />
-                <TH label="Institute"  k="Institute" />
-                <TH label="Position"   k="Position" />
-                {showCredentials && <TH label="User ID"   k="UserID" />}
-                {showCredentials && <TH label="Password"  />}
-                <TH label="Posts"      k="Posts" />
-                <TH label="Apply Date" k="ApplyDate" />
-                <TH label="Status"     k="ExamStatus" center />
-                <TH label="Prelim"     k="Preliminary" center />
-                <TH label="Written"    k="Written" center />
-                <TH label="Viva"       k="Viva" center />
-                {tab === "done" && <TH label="Progress" center />}
-                <TH label="Stage"      center />
-              </tr>
-            </thead>
-            <tbody>
-              {processed.map((record, idx) => {
-                const variant = getRowVariant(record);
-                const meta    = VARIANT_META[variant];
-                const progress = getPipelineProgress(record);
-                return (
-                  <tr
-                    key={idx}
-                    onClick={() => setSelectedRecord(record)}
-                    className={`group cursor-pointer border-b border-gray-800/50 hover:brightness-125 transition-all duration-100 ${meta.rowBg} ${meta.rowBorder}`}
-                  >
-                    {/* SL */}
-                    <td className="px-3 py-2.5 text-gray-600 font-mono w-8 text-nowrap">
-                      {record.SL || String(idx + 1)}
-                    </td>
+          <>
+            {/* ── MOBILE CARD VIEW (< md) ── */}
+            <div className="md:hidden flex flex-col gap-3 p-4">
+              {processed.map((record, idx) => (
+                <MobileRecordCard
+                  key={idx}
+                  record={record}
+                  idx={idx}
+                  tab={tab}
+                  showCredentials={showCredentials}
+                  onSelect={setSelectedRecord}
+                />
+              ))}
+            </div>
 
-                    {/* Institute */}
-                    <td className="px-3 py-2.5 font-semibold text-gray-200 max-w-[140px]">
-                      <span className="truncate block" title={record.Institute}>{record.Institute || "—"}</span>
-                    </td>
-
-                    {/* Position */}
-                    <td className="px-3 py-2.5 text-gray-300 max-w-[160px]">
-                      <span className="truncate block" title={record.Position}>{record.Position || "—"}</span>
-                    </td>
-
-                    {/* Credentials */}
-                    {showCredentials && (
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-1 font-mono text-gray-400">
-                          <span className="truncate max-w-[100px]" title={record.UserID}>{record.UserID || "—"}</span>
-                          <CopyBtn text={record.UserID} />
-                        </div>
+            {/* ── DESKTOP TABLE VIEW (≥ md) ── */}
+            <table className="hidden md:table w-full text-xs border-collapse min-w-[900px]">
+              <thead className="sticky top-0 z-10 bg-gray-950 border-b border-gray-800">
+                <tr>
+                  <TH label="#"          />
+                  <TH label="Institute"  k="Institute" />
+                  <TH label="Position"   k="Position" />
+                  {showCredentials && <TH label="User ID"   k="UserID" />}
+                  {showCredentials && <TH label="Password"  />}
+                  <TH label="Posts"      k="Posts" />
+                  <TH label="Apply Date" k="ApplyDate" />
+                  <TH label="Status"     k="ExamStatus" center />
+                  <TH label="Prelim"     k="Preliminary" center />
+                  <TH label="Written"    k="Written" center />
+                  <TH label="Viva"       k="Viva" center />
+                  {tab === "done" && <TH label="Progress" center />}
+                  <TH label="Stage"      center />
+                </tr>
+              </thead>
+              <tbody>
+                {processed.map((record, idx) => {
+                  const variant = getRowVariant(record);
+                  const meta    = VARIANT_META[variant];
+                  const progress = getPipelineProgress(record);
+                  return (
+                    <tr
+                      key={idx}
+                      onClick={() => setSelectedRecord(record)}
+                      className={`group cursor-pointer border-b border-gray-800/50 hover:brightness-125 transition-all duration-100 ${meta.rowBg} ${meta.rowBorder}`}
+                    >
+                      {/* SL */}
+                      <td className="px-3 py-2.5 text-gray-600 font-mono w-8 text-nowrap">
+                        {record.SL || String(idx + 1)}
                       </td>
-                    )}
-                    {showCredentials && (
-                      <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-1 font-mono text-gray-400">
-                          <span className="truncate max-w-[100px] blur-[4px] hover:blur-none transition-all select-none" title={record.Password}>
-                            {record.Password || "—"}
-                          </span>
-                          <CopyBtn text={record.Password} />
-                        </div>
+
+                      {/* Institute */}
+                      <td className="px-3 py-2.5 font-semibold text-gray-200 max-w-[140px]">
+                        <span className="truncate block" title={record.Institute}>{record.Institute || "—"}</span>
                       </td>
-                    )}
 
-                    {/* Posts */}
-                    <td className="px-3 py-2.5 text-center">
-                      <span className="text-gray-300 font-mono">{formatPosts(record.Posts)}</span>
-                    </td>
+                      {/* Position */}
+                      <td className="px-3 py-2.5 text-gray-300 max-w-[160px]">
+                        <span className="truncate block" title={record.Position}>{record.Position || "—"}</span>
+                      </td>
 
-                    {/* Apply Date */}
-                    <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap font-mono">
-                      {record.ApplyDate
-                        ? new Intl.DateTimeFormat("en-CA", {
-                            timeZone: "UTC",
-                          }).format(new Date(record.ApplyDate))
-                        : ""}
-                    </td>
-
-                    {/* Exam Status */}
-                    <td className="px-3 py-2.5 text-center">
-                      {record.ExamStatus?.trim().toLowerCase() === "done" ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                          <span className="w-1 h-1 rounded-full bg-emerald-400" /> Done
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30">
-                          <span className="w-1 h-1 rounded-full bg-violet-400 animate-pulse" /> Future
-                        </span>
-                      )}
-                    </td>
-
-                    {/* Round pills */}
-                    <td className="px-3 py-2.5 text-center"><RoundPill val={record.Preliminary} /></td>
-                    <td className="px-3 py-2.5 text-center"><RoundPill val={record.Written} /></td>
-                    <td className="px-3 py-2.5 text-center"><RoundPill val={record.Viva} /></td>
-
-                    {/* Pipeline progress */}
-                    {tab === "done" && (
-                      <td className="px-3 py-2.5 w-24">
-                        <div className="flex items-center gap-1.5">
-                          <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${progress}%`,
-                                background: progress === 100 ? "#34d399" : progress >= 67 ? "#38bdf8" : progress >= 33 ? "#818cf8" : "#f59e0b",
-                              }}
-                            />
+                      {/* Credentials */}
+                      {showCredentials && (
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-1 font-mono text-gray-400">
+                            <span className="truncate max-w-[100px]" title={record.UserID}>{record.UserID || "—"}</span>
+                            <CopyBtn text={record.UserID} />
                           </div>
-                          <span className="text-gray-600 font-mono w-6 text-right">{progress}%</span>
-                        </div>
-                      </td>
-                    )}
+                        </td>
+                      )}
+                      {showCredentials && (
+                        <td className="px-3 py-2.5">
+                          <div className="flex items-center gap-1 font-mono text-gray-400">
+                            <span className="truncate max-w-[100px] blur-[4px] hover:blur-none transition-all select-none" title={record.Password}>
+                              {record.Password || "—"}
+                            </span>
+                            <CopyBtn text={record.Password} />
+                          </div>
+                        </td>
+                      )}
 
-                    {/* Stage badge */}
-                    <td className="px-3 py-2.5 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${meta.badge}`}>
-                        <span className={`w-1 h-1 rounded-full ${meta.dot}`} />
-                        {meta.label}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      {/* Posts */}
+                      <td className="px-3 py-2.5 text-center">
+                        <span className="text-gray-300 font-mono">{formatPosts(record.Posts)}</span>
+                      </td>
+
+                      {/* Apply Date */}
+                      <td className="px-3 py-2.5 text-gray-400 whitespace-nowrap font-mono">
+                        {record.ApplyDate
+                          ? new Intl.DateTimeFormat("en-CA", {
+                              timeZone: "UTC",
+                            }).format(new Date(record.ApplyDate))
+                          : ""}
+                      </td>
+
+                      {/* Exam Status */}
+                      <td className="px-3 py-2.5 text-center">
+                        {toStr(record.ExamStatus).trim().toLowerCase() === "done" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <span className="w-1 h-1 rounded-full bg-emerald-400" /> Done
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                            <span className="w-1 h-1 rounded-full bg-violet-400 animate-pulse" /> Future
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Round pills */}
+                      <td className="px-3 py-2.5 text-center"><RoundPill val={record.Preliminary} /></td>
+                      <td className="px-3 py-2.5 text-center"><RoundPill val={record.Written} /></td>
+                      <td className="px-3 py-2.5 text-center"><RoundPill val={record.Viva} /></td>
+
+                      {/* Pipeline progress */}
+                      {tab === "done" && (
+                        <td className="px-3 py-2.5 w-24">
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${progress}%`,
+                                  background: progress === 100 ? "#34d399" : progress >= 67 ? "#38bdf8" : progress >= 33 ? "#818cf8" : "#f59e0b",
+                                }}
+                              />
+                            </div>
+                            <span className="text-gray-600 font-mono w-6 text-right">{progress}%</span>
+                          </div>
+                        </td>
+                      )}
+
+                      {/* Stage badge */}
+                      <td className="px-3 py-2.5 text-center">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${meta.badge}`}>
+                          <span className={`w-1 h-1 rounded-full ${meta.dot}`} />
+                          {meta.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 
       {/* ── Footer summary ── */}
-      <div className="border-t border-gray-800 px-6 py-2 flex items-center gap-4 flex-wrap bg-gray-950">
+      <div className="border-t border-gray-800 px-4 sm:px-6 py-2 flex items-center gap-4 flex-wrap bg-gray-950">
         <span className="text-xs text-gray-600 font-mono">
           Showing <span className="text-gray-400">{processed.length}</span> of <span className="text-gray-400">{activeData.length}</span>
         </span>
         {tab === "done" && (
           <>
-            <span className="text-gray-800">·</span>
+            <span className="text-gray-800 hidden sm:inline">·</span>
             {(["viva_qualified","written_qualified","prelim_qualified","all_fail","not_attained","pending"] as RowVariant[]).map((v) => {
               const c = done.filter((d) => getRowVariant(d) === v).length;
               if (c === 0) return null;
